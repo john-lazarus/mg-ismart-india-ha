@@ -1,1 +1,24 @@
-{"config":{"step":{"user":{"title":"MG iSMART India","description":"Use the India 10-digit mobile number linked to the MG iSMART account.","data":{"phone":"Mobile number","password":"Password","pin":"Vehicle control PIN (optional)"}},"vehicle":{"title":"Select vehicle","data":{"vin":"Vehicle"}}},"error":{"cannot_connect":"Could not connect or authenticate"}}}
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "MG iSMART India",
+        "description": "Enter the 10 digit Indian mobile number registered with MG iSMART. Do not include +91, spaces, or country code.",
+        "data": {
+          "phone": "10 digit Indian mobile number",
+          "password": "MG iSMART password",
+          "pin": "Vehicle control PIN (optional, needed for remote controls)"
+        }
+      },
+      "vehicle": {
+        "title": "Select vehicle",
+        "data": {
+          "vin": "Vehicle"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not connect or authenticate. Check the 10 digit Indian mobile number and MG iSMART password."
+    }
+  }
+}

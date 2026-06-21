@@ -22,8 +22,8 @@ def normalize_phone(phone: str) -> str:
 
 
 def make_device_id(phone: str) -> str:
-    return "ha-india-" + \
-        hashlib.sha256(normalize_phone(phone).encode()).hexdigest()[:40]
+    seed = hashlib.sha256(f"mg-ismart-india:{normalize_phone(phone)}".encode()).hexdigest()
+    return (f"haos-mg-ismart-india-{seed}" + "0" * 120)[:103]
 
 
 def md5_hex(value: str) -> str:
@@ -56,13 +56,11 @@ def hash_control_pin(pin: str) -> str:
 
 
 def decrypt_gateway_body(encrypted: str, headers: Any) -> str:
-    timestamp = headers.get(
-        "APP-TIMESTAMP") or headers.get("app-timestamp") or ""
-    key = md5_hex(timestamp)[:16].encode()
+    timestamp = headers.get("APP-SEND-DATE") or headers.get("app-send-date") or ""
+    content_type = headers.get("ORIGINAL-CONTENT-TYPE") or headers.get("original-content-type") or "application/json"
+    key = md5_hex(timestamp + "1" + content_type)
+    iv = md5_hex(timestamp)
     return unpad(
-        AES.new(
-            key,
-            AES.MODE_CBC,
-            key).decrypt(
-            unhexlify(encrypted)),
-        AES.block_size).decode()
+        AES.new(unhexlify(key), AES.MODE_CBC, unhexlify(iv)).decrypt(unhexlify(encrypted)),
+        AES.block_size,
+    ).decode()

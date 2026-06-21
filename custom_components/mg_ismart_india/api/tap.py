@@ -5,6 +5,8 @@ from typing import Any
 import asn1tools
 
 TAP_RESERVED_SIZE = 16
+TAP_PROTOCOL_VERSION = 33
+V11_PROTOCOL_VERSION = 17
 PROTOCOL = 513
 STATUS_APP_ID = "511"
 CONTROL_APP_ID = "510"
@@ -52,99 +54,127 @@ def codec11():
     return asn1tools.compile_string(ASN_V11, "uper")
 
 
+def _frame_v21(dispatcher: bytes, app: bytes) -> str:
+    dispatcher_length = len(dispatcher) + 3
+    if dispatcher_length > 255:
+        raise ValueError("TAP dispatcher too large")
+    payload = bytes((TAP_PROTOCOL_VERSION, dispatcher_length, 0)) + bytes(TAP_RESERVED_SIZE) + dispatcher + app
+    return "1" + f"{len(payload) + 3:04X}" + payload.hex().upper()
+
+
 def _dispatcher(
-        uid: str,
-        token: str,
-        vin: str,
-        app_id: str,
-        app: bytes,
-        event_id: int,
-        msg_id: int = 0) -> bytes:
-    return codec21().encode("MPDispatcherBody",
-                            {"uid": uid,
-                             "token": token,
-                             "applicationID": app_id,
-                             "vin": vin,
-                             "messageID": msg_id,
-                             "eventCreationTime": int(time.time()),
-                             "eventID": event_id,
-                             "applicationDataLength": len(app),
-                             "applicationDataEncoding": "perUnaligned",
-                             "applicationDataProtocolVersion": PROTOCOL}) + (b"\x00" * TAP_RESERVED_SIZE) + app
+    uid: str,
+    token: str,
+    vin: str,
+    app_id: str,
+    app: bytes,
+    event_id: int,
+    msg_id: int = 1,
+) -> bytes:
+    return codec21().encode(
+        "MPDispatcherBody",
+        {
+            "uid": uid,
+            "token": token,
+            "applicationID": app_id,
+            "vin": vin,
+            "messageID": msg_id,
+            "eventCreationTime": int(time.time()),
+            "eventID": event_id,
+            "ulMessageCounter": 0,
+            "dlMessageCounter": 0,
+            "ackMessageCounter": 0,
+            "ackRequired": False,
+            "applicationDataLength": len(app),
+            "applicationDataEncoding": "perUnaligned",
+            "applicationDataProtocolVersion": PROTOCOL,
+            "testFlag": 2,
+            "result": 0,
+        },
+    )
 
 
-def encode_status_request(
-        uid: str,
-        token: str,
-        vin: str,
-        event_id: int) -> str:
+def encode_status_request(uid: str, token: str, vin: str, event_id: int) -> str:
     app = codec21().encode("OTARVMVehicleStatusReq", {"vehStatusReqType": 2})
-    return (
-        _dispatcher(
-            uid,
-            token,
-            vin,
-            STATUS_APP_ID,
-            app,
-            event_id)).hex().upper()
+    return _frame_v21(_dispatcher(uid, token, vin, STATUS_APP_ID, app, event_id), app)
 
 
-def encode_control_request(uid: str,
-                           token: str,
-                           vin: str,
-                           event_id: int,
-                           typ: int,
-                           params: list[tuple[int,
-                                              bytes]]) -> str:
-    app = codec21().encode("OTARVCReq", {"rvcReqType": bytes([typ]), "rvcParams": [
-        {"paramId": i, "paramValue": v} for i, v in params]})
-    return (
-        _dispatcher(
-            uid,
-            token,
-            vin,
-            CONTROL_APP_ID,
-            app,
-            event_id,
-            1)).hex().upper()
+def encode_control_request(
+    uid: str,
+    token: str,
+    vin: str,
+    event_id: int,
+    typ: int,
+    params: list[tuple[int, bytes]],
+) -> str:
+    app = codec21().encode(
+        "OTARVCReq",
+        {
+            "rvcReqType": bytes([typ]),
+            "rvcParams": [{"paramId": i, "paramValue": v} for i, v in params],
+        },
+    )
+    return _frame_v21(_dispatcher(uid, token, vin, CONTROL_APP_ID, app, event_id), app)
 
 
-def encode_pin_request(
-        uid: str,
-        token: str,
-        vin: str,
-        event_id: int,
-        pin_hash: str) -> str:
+def encode_pin_request(uid: str, token: str, vin: str, event_id: int, pin_hash: str) -> str:
     app = codec11().encode("PINVerificationReq", {"pin": pin_hash})
-    body = codec11().encode("MPDispatcherBodyV11",
-                            {"uid": uid,
-                             "token": token,
-                             "applicationID": PIN_APP_ID,
-                             "vin": vin,
-                             "eventCreationTime": int(time.time()),
-                             "eventID": event_id,
-                             "messageID": 1,
-                             "iccID": "00000000000000000000",
-                             "applicationDataLength": len(app),
-                             "applicationDataEncoding": "perUnaligned",
-                             "applicationDataProtocolVersion": PROTOCOL}) + (b"\x00" * TAP_RESERVED_SIZE) + app
-    return body.hex().upper()
+    body = codec11().encode(
+        "MPDispatcherBodyV11",
+        {
+            "uid": uid,
+            "token": token,
+            "applicationID": PIN_APP_ID,
+            "vin": vin,
+            "eventCreationTime": int(time.time()),
+            "messageID": 1,
+            "messageCounter": {"uplinkCounter": 1, "downlinkCounter": 0},
+            "simInfo": "1234567890987654321",
+            "iccID": "12345678901234567890",
+            "applicationDataLength": len(app),
+            "applicationDataEncoding": "perUnaligned",
+            "applicationDataProtocolVersion": PROTOCOL,
+            "testFlag": 2,
+        },
+    )
+    dispatcher_length = len(body) + 4
+    if dispatcher_length > 255:
+        raise ValueError("TAP PIN dispatcher too large")
+    payload = bytes((V11_PROTOCOL_VERSION, 0, dispatcher_length, 0)) + body + app
+    return f"{len(payload) * 2 + 5:04X}1" + payload.hex().upper()
 
 
 def _decode_v21(raw: str) -> tuple[dict[str, Any], bytes | None]:
-    data = bytes.fromhex(raw)
-    dispatcher = codec21().decode("MPDispatcherBody", data)
-    length = dispatcher.get("applicationDataLength") or 0
-    return dispatcher, data[-length:] if length else None
+    if len(raw) < 5 or raw[0] != "1":
+        raise ValueError("unexpected TAP v2.1 response framing")
+    data = bytes.fromhex(raw[5:])
+    if len(data) < 19:
+        raise ValueError("short TAP v2.1 response")
+    dispatcher_length = data[1]
+    dispatcher_end = TAP_RESERVED_SIZE + dispatcher_length
+    if dispatcher_length < 3 or dispatcher_end > len(data):
+        raise ValueError("invalid TAP dispatcher length")
+    dispatcher = codec21().decode("MPDispatcherBody", data[19:dispatcher_end])
+    app_length = dispatcher.get("applicationDataLength", 0) or 0
+    if not app_length:
+        return dispatcher, None
+    app = data[dispatcher_end: dispatcher_end + app_length]
+    if len(app) != app_length:
+        raise ValueError("truncated TAP app data")
+    return dispatcher, app
 
 
-def decode_status_response(
-        raw: str) -> tuple[dict[str, Any], dict[str, Any] | None]:
+def decode_status_response(raw: str) -> tuple[dict[str, Any], dict[str, Any] | None]:
     disp, app = _decode_v21(raw)
     return disp, codec21().decode("OTARVMVehicleStatusResp513", app) if app else None
 
 
-def decode_control_response(
-        raw: str) -> tuple[dict[str, Any], dict[str, Any] | None]:
+def decode_control_response(raw: str) -> tuple[dict[str, Any], dict[str, Any] | None]:
     disp, app = _decode_v21(raw)
     return disp, codec21().decode("OTARVCStatus513", app) if app else None
+
+
+def decode_pin_response(raw: str) -> dict[str, Any]:
+    payload = bytes.fromhex(raw[5:] if len(raw) >= 5 and raw[4] == "1" else raw)
+    dispatcher_length = payload[2]
+    return codec11().decode("MPDispatcherBodyV11", payload[4:dispatcher_length])

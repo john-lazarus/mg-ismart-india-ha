@@ -1,11 +1,16 @@
 {
   "domain": "mg_ismart_india",
   "name": "MG iSMART India",
-  "codeowners": ["@john-lazarus"],
+  "codeowners": [
+    "@john-lazarus"
+  ],
   "config_flow": true,
   "documentation": "https://github.com/john-lazarus/mg-ismart-india-ha",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/john-lazarus/mg-ismart-india-ha/issues",
-  "requirements": ["pycryptodome>=3.20.0", "asn1tools>=0.167.0"],
-  "version": "0.1.0"
+  "requirements": [
+    "pycryptodome>=3.20.0",
+    "asn1tools>=0.167.0"
+  ],
+  "version": "0.1.1"
 }
