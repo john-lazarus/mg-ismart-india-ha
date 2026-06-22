@@ -38,3 +38,8 @@ Exposes PIN-gated remote control entities even when the India feature endpoint d
 ## v0.1.5
 
 Adds a proper options/configure workflow for entering, updating, or clearing the vehicle control PIN after initial setup. The integration reloads after options changes so remote-control entities become available without deleting and recreating the integration.
+
+
+## v0.1.6
+
+Fixes the Configure/options gear error on current Home Assistant versions by using the new OptionsFlow config_entry API. Also adds the missing climate temperature unit required by Home Assistant when adding the vehicle AC control entity.

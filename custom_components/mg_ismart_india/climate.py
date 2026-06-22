@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from homeassistant.components.climate import ClimateEntity, ClimateEntityFeature, HVACMode
+from homeassistant.const import UnitOfTemperature
 
 from .const import DOMAIN
 from .entity import MgIndiaEntity
@@ -15,6 +16,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
 class MgClimate(MgIndiaEntity, ClimateEntity):
     _attr_supported_features = ClimateEntityFeature.TURN_ON | ClimateEntityFeature.TURN_OFF
     _attr_hvac_modes = [HVACMode.OFF, HVACMode.COOL]
+    _attr_temperature_unit = UnitOfTemperature.CELSIUS
 
     def __init__(self, coordinator, client):
         super().__init__(coordinator, "climate", "Climate")

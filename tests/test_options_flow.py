@@ -17,3 +17,17 @@ def test_options_can_clear_pin():
 
 def test_empty_options_keeps_existing_pin():
     assert options_from_user_input({}) == {}
+
+
+
+def test_options_flow_constructor_does_not_assign_config_entry():
+    from custom_components.mg_ismart_india.config_flow import MgIndiaConfigFlow, MgIndiaOptionsFlow
+    flow = MgIndiaConfigFlow.async_get_options_flow(object())
+    assert isinstance(flow, MgIndiaOptionsFlow)
+
+
+
+def test_options_flow_constructor_matches_new_ha_api():
+    import inspect
+    from custom_components.mg_ismart_india.config_flow import MgIndiaOptionsFlow
+    assert list(inspect.signature(MgIndiaOptionsFlow).parameters) == []
