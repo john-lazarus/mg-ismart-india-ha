@@ -9,7 +9,7 @@ from .entity import MgIndiaEntity
 async def async_setup_entry(hass, entry, async_add_entities):
     data = hass.data[DOMAIN][entry.entry_id]
     coordinator = data["coordinator"]
-    entities = []
+    entities = [MgRefreshButton(coordinator)]
     if coordinator.data.capabilities.find_my_car:
         entities.append(MgButton(coordinator, data["client"], "find_my_car", "Find My Car", "find_my_car"))
     if coordinator.data.capabilities.tailgate:
@@ -29,4 +29,12 @@ class MgButton(MgIndiaEntity, ButtonEntity):
 
     async def async_press(self):
         await getattr(self.client, self.method)()
+        await self.coordinator.async_request_refresh()
+
+
+class MgRefreshButton(MgIndiaEntity, ButtonEntity):
+    def __init__(self, coordinator):
+        super().__init__(coordinator, "refresh_status", "Refresh Status")
+
+    async def async_press(self):
         await self.coordinator.async_request_refresh()

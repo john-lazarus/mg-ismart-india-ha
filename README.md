@@ -18,3 +18,8 @@ This project is not affiliated with MG, SAIC, or JSW MG Motor India.
 ## v0.1.1
 
 Fixes India TAP login/gateway authentication, vehicle list parsing, status polling, and clarifies that setup expects a 10 digit Indian mobile number without +91.
+
+
+## v0.1.2
+
+Filters the MG India stale driver-window false-positive seen when the vehicle is otherwise closed and locked. Adds a Refresh Status button so Home Assistant can request fresh values on demand.

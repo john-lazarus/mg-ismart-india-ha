@@ -81,19 +81,49 @@ def parse_vehicle(raw: dict[str, Any]) -> Vehicle:
 
 def parse_status(raw: dict[str, Any]) -> Status:
     basic = raw.get("basicVehicleStatus", raw)
+    locked = _bool(basic.get("lockStatus"))
+    driver_door = _bool(basic.get("driverDoor"))
+    passenger_door = _bool(basic.get("passengerDoor"))
+    rear_left_door = _bool(basic.get("rearLeftDoor"))
+    rear_right_door = _bool(basic.get("rearRightDoor"))
+    boot = _bool(basic.get("bootStatus"))
+    bonnet = _bool(basic.get("bonnetStatus"))
+    driver_window = _bool(basic.get("driverWindow"))
+    passenger_window = _bool(basic.get("passengerWindow"))
+    rear_left_window = _bool(basic.get("rearLeftWindow"))
+    rear_right_window = _bool(basic.get("rearRightWindow"))
+    # MG India can report a stale driver-window-open bit while the
+    # vehicle is otherwise fully closed and locked. Do not raise a false
+    # open-window alarm for that known-bad combination.
+    if (
+        driver_window is True
+        and locked is True
+        and not any((
+            driver_door,
+            passenger_door,
+            rear_left_door,
+            rear_right_door,
+            boot,
+            bonnet,
+            passenger_window,
+            rear_left_window,
+            rear_right_window,
+        ))
+    ):
+        driver_window = False
     return Status(
         status_time=_int(raw.get("statusTime")),
-        locked=_bool(basic.get("lockStatus")),
-        driver_door_open=_bool(basic.get("driverDoor")),
-        passenger_door_open=_bool(basic.get("passengerDoor")),
-        rear_left_door_open=_bool(basic.get("rearLeftDoor")),
-        rear_right_door_open=_bool(basic.get("rearRightDoor")),
-        boot_open=_bool(basic.get("bootStatus")),
-        bonnet_open=_bool(basic.get("bonnetStatus")),
-        driver_window_open=_bool(basic.get("driverWindow")),
-        passenger_window_open=_bool(basic.get("passengerWindow")),
-        rear_left_window_open=_bool(basic.get("rearLeftWindow")),
-        rear_right_window_open=_bool(basic.get("rearRightWindow")),
+        locked=locked,
+        driver_door_open=driver_door,
+        passenger_door_open=passenger_door,
+        rear_left_door_open=rear_left_door,
+        rear_right_door_open=rear_right_door,
+        boot_open=boot,
+        bonnet_open=bonnet,
+        driver_window_open=driver_window,
+        passenger_window_open=passenger_window,
+        rear_left_window_open=rear_left_window,
+        rear_right_window_open=rear_right_window,
         sunroof_open=_bool(basic.get("sunroofStatus")),
         climate_running=(basic.get("remoteClimateStatus") in (2, 3)) if basic.get("remoteClimateStatus") is not None else None,
         interior_temperature=_int(basic.get("interiorTemperature"), -60, 90),
