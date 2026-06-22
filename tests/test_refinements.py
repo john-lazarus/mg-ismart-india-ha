@@ -341,3 +341,65 @@ def test_control_retries_once_after_bad_control_response_frame(monkeypatch):
         assert logins == ["login"]
 
     asyncio.run(run())
+
+
+def test_login_retries_transient_bad_tap_login_frame(monkeypatch):
+    async def run():
+        client = MgIndiaClient(_Session(), "9876543210", "secret")
+        results = [
+            ValueError("Unexpected TAP login response framing"),
+            ("uid", "token"),
+        ]
+
+        def decode(_text):
+            item = results.pop(0)
+            if isinstance(item, Exception):
+                raise item
+            return item
+
+        monkeypatch.setattr(
+            "custom_components.mg_ismart_india.api.client.decode_login_response",
+            decode,
+        )
+        monkeypatch.setattr(
+            "custom_components.mg_ismart_india.api.client.LOGIN_DELAY",
+            0,
+        )
+
+        await client.login()
+
+        assert client.uid == "uid"
+        assert client.token == "token"
+        assert client.session.posts == 2
+
+    asyncio.run(run())
+
+
+def test_door_lock_treats_timeout_as_success_when_status_matches(monkeypatch):
+    async def run():
+        client = MgIndiaClient(
+            _Session(),
+            "9876543210",
+            "secret",
+            vin="VIN12345678901234",
+            pin_hash="A" * 32,
+        )
+        calls = []
+
+        async def fake_control(name, typ, params):
+            calls.append((name, typ, params))
+            from custom_components.mg_ismart_india.api.crypto import MgIndiaApiError
+
+            raise MgIndiaApiError("Door lock did not complete")
+
+        async def fake_status():
+            return Status(locked=True)
+
+        monkeypatch.setattr(client, "_control", fake_control)
+        monkeypatch.setattr(client, "status", fake_status)
+
+        await client.control_door_lock(True)
+
+        assert calls == [("Door lock", 1, [])]
+
+    asyncio.run(run())

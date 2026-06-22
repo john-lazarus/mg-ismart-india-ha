@@ -58,3 +58,8 @@ Fixes MG India remote-control parameter payloads for door lock/unlock, climate, 
 ## v0.1.9
 
 Adds an app-like per-vehicle remote-command busy state so other remote controls are unavailable while MG is processing a command, with Remote Command In Progress and Last Remote Command entities for visible feedback. Optional controls that are not reported for a vehicle, such as windows/sunroof/tailgate/heated seats, are no longer exposed by default. Control polling now retries once after a transient malformed TAP control response and waits longer for MG command completion.
+
+
+## v0.1.10
+
+Retries transient malformed TAP login responses seen immediately after Home Assistant restart, reducing startup unavailable states that required manual integration reload. Door lock/unlock now treats a vendor command timeout as success only if a fresh status read proves the requested lock state was actually reached.

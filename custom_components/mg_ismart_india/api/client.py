@@ -39,6 +39,8 @@ GATEWAY_BASE = "https://iov-gateway.mgindia.co.in/api.app/v1"
 USER_AGENT = "CER_IKE_01/2.3.0 (iPad; iOS 26.3; Scale/2.00)"
 CONTROL_ATTEMPTS = 15
 CONTROL_DELAY = 2.0
+LOGIN_ATTEMPTS = 3
+LOGIN_DELAY = 1.5
 STATUS_ATTEMPTS = 10
 STATUS_DELAY = 1.5
 LOGIN_DISPATCHER_TEMPLATE_HEX = (
@@ -281,22 +283,36 @@ class MgIndiaClient:
         return f"{len(raw_without_length) + 4:04X}{raw_without_length}"
 
     async def login(self) -> None:
-        body = self._build_login_body()
-        headers = {
-            "User-Agent": USER_AGENT,
-            "Content-Type": "text/plain",
-            "Accept": "*/*",
-            "Accept-Language": "en-US;q=1",
-            "APP-SIGNATURE": tap_signature(body),
-            "SIGNATURE": "1",
-        }
-        async with self.session.post(
-            TAP_LOGIN_URL, data=body, headers=headers, timeout=30
-        ) as response:
-            text = await response.text()
-            if response.status >= 400:
-                raise MgIndiaApiError(f"Login failed: HTTP {response.status}")
-        self.uid, self.token = decode_login_response(text)
+        last_error: Exception | None = None
+        for attempt in range(LOGIN_ATTEMPTS):
+            body = self._build_login_body()
+            headers = {
+                "User-Agent": USER_AGENT,
+                "Content-Type": "text/plain",
+                "Accept": "*/*",
+                "Accept-Language": "en-US;q=1",
+                "APP-SIGNATURE": tap_signature(body),
+                "SIGNATURE": "1",
+            }
+            async with self.session.post(
+                TAP_LOGIN_URL, data=body, headers=headers, timeout=30
+            ) as response:
+                text = await response.text()
+                if response.status >= 400:
+                    last_error = MgIndiaApiError(
+                        f"Login failed: HTTP {response.status}"
+                    )
+                else:
+                    try:
+                        self.uid, self.token = decode_login_response(text)
+                        return
+                    except (MgIndiaApiError, ValueError) as err:
+                        last_error = err
+            if attempt < LOGIN_ATTEMPTS - 1:
+                await asyncio.sleep(LOGIN_DELAY)
+        raise MgIndiaApiError(
+            "Login failed after retrying transient TAP response"
+        ) from last_error
 
     async def gateway_get(
         self, path: str, params: dict[str, Any] | None = None
@@ -542,7 +558,17 @@ class MgIndiaClient:
                 (255, b"\x00"),
             ]
         )
-        await self._control("Door lock", 1 if lock else 2, params)
+        try:
+            await self._control("Door lock", 1 if lock else 2, params)
+        except MgIndiaApiError as err:
+            # MG India sometimes applies a lock/unlock command but never returns
+            # a terminal remote-command status. Treat it as success only when a
+            # fresh status read proves the target lock state was achieved.
+            if "did not complete" in str(err):
+                status = await self.status()
+                if status.locked is lock:
+                    return
+            raise
 
     async def find_my_car(self) -> None:
         await self._control(
