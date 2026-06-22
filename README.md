@@ -48,3 +48,8 @@ Fixes the Configure/options gear error on current Home Assistant versions by usi
 ## v0.1.7
 
 Bug-hunt/QOL pass: fixes control calls so they log in before PIN verification and poll using the returned event id, redacts phone/VIN/PIN/password from diagnostics, handles invalid PINs in the options flow without a UI crash, increases status polling tolerance, and adds regression tests for these paths.
+
+
+## v0.1.8
+
+Fixes MG India remote-control parameter payloads for door lock/unlock, climate, find-my-car, tailgate, windows, sunroof, and heated seats. Also adds a safe diagnostics boolean showing whether a control PIN is configured, without exposing the PIN or hash.

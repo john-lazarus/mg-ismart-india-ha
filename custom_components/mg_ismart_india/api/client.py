@@ -516,27 +516,69 @@ class MgIndiaClient:
         raise MgIndiaApiError(f"{name} did not complete")
 
     async def control_climate(self, on: bool) -> None:
-        await self._control("Climate", 6, [(1, b"\x01" if on else b"\x00")])
+        params = (
+            [(19, b"\x03"), (20, b"\x03"), (255, b"\x00")]
+            if on
+            else [(19, b"\x00"), (20, b"\x00"), (255, b"\x00")]
+        )
+        await self._control("Climate", 6, params)
 
     async def control_door_lock(self, lock: bool) -> None:
-        await self._control(
-            "Door lock", 1 if lock else 2, [(1, b"\x01" if lock else b"\x00")]
+        params = (
+            []
+            if lock
+            else [
+                (4, b"\x00"),
+                (5, b"\x00"),
+                (6, b"\x00"),
+                (7, b"\x03"),
+                (255, b"\x00"),
+            ]
         )
+        await self._control("Door lock", 1 if lock else 2, params)
 
     async def find_my_car(self) -> None:
-        await self._control("Find my car", 5, [(1, b"\x01")])
+        await self._control(
+            "Find my car",
+            0,
+            [(1, b"\x01"), (2, b"\x01"), (3, b"\x01"), (255, b"\x00")],
+        )
 
     async def release_tailgate(self) -> None:
-        await self._control("Tailgate", 7, [(1, b"\x01")])
+        await self._control(
+            "Tailgate",
+            2,
+            [(4, b"\x00"), (5, b"\x00"), (6, b"\x00"), (7, b"\x02"), (255, b"\x00")],
+        )
 
     async def control_windows(self, open_windows: bool, ids: tuple[int, ...]) -> None:
-        value = b"\x03" if open_windows else b"\x00"
-        await self._control("Windows", 3, [(i, value) for i in ids] + [(13, value)])
+        selected = set(ids)
+        params = [
+            (param_id, b"\x01" if param_id in selected else b"\x00")
+            for param_id in (8, 9, 10, 11, 12)
+        ]
+        params.append((13, b"\x03" if open_windows else b"\x00"))
+        await self._control("Windows", 3, params)
 
     async def control_sunroof(self, open_sunroof: bool) -> None:
-        await self._control("Sunroof", 3, [(13, b"\x03" if open_sunroof else b"\x00")])
+        await self._control(
+            "Sunroof",
+            3,
+            [
+                (8, b"\x01"),
+                (9, b"\x00"),
+                (10, b"\x00"),
+                (11, b"\x00"),
+                (12, b"\x00"),
+                (13, b"\x03" if open_sunroof else b"\x00"),
+            ],
+        )
 
     async def control_heated_seats(self, driver: int, passenger: int) -> None:
+        if driver not in range(4) or passenger not in range(4):
+            raise MgIndiaApiError("Heated-seat levels must be between 0 and 3")
         await self._control(
-            "Heated seats", 8, [(20, bytes([driver])), (21, bytes([passenger]))]
+            "Heated seats",
+            5,
+            [(17, bytes([driver])), (18, bytes([passenger])), (255, b"\x00")],
         )

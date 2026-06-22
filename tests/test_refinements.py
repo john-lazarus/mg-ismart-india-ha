@@ -150,5 +150,83 @@ def test_diagnostics_redacts_credentials_and_uses_slots_dataclass():
         assert "9876543210" not in text
         assert "VIN12345678901234" not in text
         assert diag["snapshot"]["capabilities"]["climate"] is True
+        assert diag["control_pin_configured"] is True
+
+    asyncio.run(run())
+
+
+def test_control_methods_use_mg_india_parameter_shapes(monkeypatch):
+    async def run():
+        client = MgIndiaClient(
+            _Session(),
+            "9876543210",
+            "secret",
+            vin="VIN12345678901234",
+            pin_hash="A" * 32,
+        )
+        calls = []
+
+        async def fake_control(name, typ, params):
+            calls.append((name, typ, params))
+
+        monkeypatch.setattr(client, "_control", fake_control)
+
+        await client.control_door_lock(False)
+        await client.control_climate(True)
+        await client.find_my_car()
+        await client.release_tailgate()
+        await client.control_windows(True, (9, 10, 11, 12))
+        await client.control_sunroof(False)
+        await client.control_heated_seats(2, 1)
+
+        assert calls[0] == (
+            "Door lock",
+            2,
+            [(4, b"\x00"), (5, b"\x00"), (6, b"\x00"), (7, b"\x03"), (255, b"\x00")],
+        )
+        assert calls[1] == (
+            "Climate",
+            6,
+            [(19, b"\x03"), (20, b"\x03"), (255, b"\x00")],
+        )
+        assert calls[2] == (
+            "Find my car",
+            0,
+            [(1, b"\x01"), (2, b"\x01"), (3, b"\x01"), (255, b"\x00")],
+        )
+        assert calls[3] == (
+            "Tailgate",
+            2,
+            [(4, b"\x00"), (5, b"\x00"), (6, b"\x00"), (7, b"\x02"), (255, b"\x00")],
+        )
+        assert calls[4] == (
+            "Windows",
+            3,
+            [
+                (8, b"\x00"),
+                (9, b"\x01"),
+                (10, b"\x01"),
+                (11, b"\x01"),
+                (12, b"\x01"),
+                (13, b"\x03"),
+            ],
+        )
+        assert calls[5] == (
+            "Sunroof",
+            3,
+            [
+                (8, b"\x01"),
+                (9, b"\x00"),
+                (10, b"\x00"),
+                (11, b"\x00"),
+                (12, b"\x00"),
+                (13, b"\x00"),
+            ],
+        )
+        assert calls[6] == (
+            "Heated seats",
+            5,
+            [(17, b"\x02"), (18, b"\x01"), (255, b"\x00")],
+        )
 
     asyncio.run(run())

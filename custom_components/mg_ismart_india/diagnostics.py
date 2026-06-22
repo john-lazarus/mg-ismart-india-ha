@@ -17,6 +17,9 @@ async def async_get_config_entry_diagnostics(hass, entry):
     vehicle = getattr(snap, "vehicle", None) if snap else None
     return {
         "entry": data,
+        "control_pin_configured": bool(
+            entry.data.get(CONF_PIN_HASH) or entry.options.get(CONF_PIN_HASH)
+        ),
         "snapshot": {
             "vehicle": {
                 "name": getattr(vehicle, "name", None),
