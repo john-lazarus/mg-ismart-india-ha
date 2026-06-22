@@ -28,3 +28,8 @@ Filters the MG India stale driver-window false-positive seen when the vehicle is
 ## v0.1.3
 
 Adds MG iSMART India brand assets for HACS/Home Assistant using the supplied MG logo.
+
+
+## v0.1.4
+
+Exposes PIN-gated remote control entities even when the India feature endpoint does not report capabilities: climate, door lock, windows, sunroof, find my car, tailgate, and heated seats. Controls still require the vehicle control PIN to be configured.

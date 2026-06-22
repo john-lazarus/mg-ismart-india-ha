@@ -9,8 +9,7 @@ from .entity import MgIndiaEntity
 async def async_setup_entry(hass, entry, async_add_entities):
     data = hass.data[DOMAIN][entry.entry_id]
     coordinator = data["coordinator"]
-    if coordinator.data.capabilities.door_lock:
-        async_add_entities([MgDoorLock(coordinator, data["client"])])
+    async_add_entities([MgDoorLock(coordinator, data["client"])])
 
 
 class MgDoorLock(MgIndiaEntity, LockEntity):

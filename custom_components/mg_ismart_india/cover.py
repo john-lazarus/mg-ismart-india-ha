@@ -9,12 +9,7 @@ from .entity import MgIndiaEntity
 async def async_setup_entry(hass, entry, async_add_entities):
     data = hass.data[DOMAIN][entry.entry_id]
     coordinator = data["coordinator"]
-    entities = []
-    if coordinator.data.capabilities.window_param_ids:
-        entities.append(MgWindows(coordinator, data["client"]))
-    if coordinator.data.capabilities.sunroof:
-        entities.append(MgSunroof(coordinator, data["client"]))
-    async_add_entities(entities)
+    async_add_entities([MgWindows(coordinator, data["client"]), MgSunroof(coordinator, data["client"])])
 
 
 class _Base(MgIndiaEntity, CoverEntity):
@@ -49,11 +44,11 @@ class MgWindows(_Base):
         return None if not chosen else not any(v for v in chosen if v is not None)
 
     async def async_open_cover(self, **kwargs):
-        await self.client.control_windows(True, self.caps.window_param_ids)
+        await self.client.control_windows(True, self.caps.window_param_ids or (9, 10, 11, 12))
         await self.coordinator.async_request_refresh()
 
     async def async_close_cover(self, **kwargs):
-        await self.client.control_windows(False, self.caps.window_param_ids)
+        await self.client.control_windows(False, self.caps.window_param_ids or (9, 10, 11, 12))
         await self.coordinator.async_request_refresh()
 
 

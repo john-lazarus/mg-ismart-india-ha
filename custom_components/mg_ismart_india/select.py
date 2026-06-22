@@ -9,11 +9,10 @@ from .entity import MgIndiaEntity
 async def async_setup_entry(hass, entry, async_add_entities):
     data = hass.data[DOMAIN][entry.entry_id]
     coordinator = data["coordinator"]
-    if coordinator.data.capabilities.heated_seats:
-        async_add_entities([
-            MgSeat(coordinator, data["client"], "driver"),
-            MgSeat(coordinator, data["client"], "passenger"),
-        ])
+    async_add_entities([
+        MgSeat(coordinator, data["client"], "driver"),
+        MgSeat(coordinator, data["client"], "passenger"),
+    ])
 
 
 class MgSeat(MgIndiaEntity, SelectEntity):
