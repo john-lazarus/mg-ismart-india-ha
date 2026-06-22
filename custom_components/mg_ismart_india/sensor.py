@@ -57,7 +57,9 @@ SENSORS = [
 
 async def async_setup_entry(hass, entry, async_add_entities):
     c = hass.data[DOMAIN][entry.entry_id]["coordinator"]
-    async_add_entities([MgIndiaSensor(c, *s) for s in SENSORS])
+    async_add_entities(
+        [MgIndiaSensor(c, *s) for s in SENSORS] + [MgLastCommandSensor(c)]
+    )
 
 
 class MgIndiaSensor(MgIndiaEntity, SensorEntity):
@@ -77,3 +79,19 @@ class MgIndiaSensor(MgIndiaEntity, SensorEntity):
         ):
             return datetime.datetime.fromtimestamp(v, datetime.UTC)
         return v
+
+
+class MgLastCommandSensor(MgIndiaEntity, SensorEntity):
+    def __init__(self, c):
+        super().__init__(c, "last_remote_command", "Last Remote Command")
+
+    @property
+    def native_value(self):
+        return getattr(self.coordinator, "last_command_status", None)
+
+    @property
+    def extra_state_attributes(self):
+        return {
+            "command": getattr(self.coordinator, "command_name", None),
+            "error": getattr(self.coordinator, "last_command_error", None),
+        }

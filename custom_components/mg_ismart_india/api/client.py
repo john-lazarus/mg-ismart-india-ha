@@ -37,7 +37,7 @@ TAP_LOGIN_URL = "https://iov-tap.mgindia.co.in/TAP.Web/ota.mp"
 TAP_STATUS_URL = "https://iov-tap.mgindia.co.in/TAP.Web/ota.mpv21"
 GATEWAY_BASE = "https://iov-gateway.mgindia.co.in/api.app/v1"
 USER_AGENT = "CER_IKE_01/2.3.0 (iPad; iOS 26.3; Scale/2.00)"
-CONTROL_ATTEMPTS = 8
+CONTROL_ATTEMPTS = 15
 CONTROL_DELAY = 2.0
 STATUS_ATTEMPTS = 10
 STATUS_DELAY = 1.5
@@ -496,7 +496,14 @@ class MgIndiaClient:
                 text = await response.text()
                 if response.status >= 400:
                     raise MgIndiaApiError(f"{name} failed: HTTP {response.status}")
-            dispatcher, control = decode_control_response(text)
+            try:
+                dispatcher, control = decode_control_response(text)
+            except (MgIndiaApiError, ValueError) as err:
+                if attempt == 0:
+                    await self.login()
+                    event_id = 0
+                    continue
+                raise MgIndiaApiError(f"{name} response could not be decoded") from err
             result = dispatcher.get("result", 0)
             if result in (2, 3) and attempt == 0:
                 await self.login()

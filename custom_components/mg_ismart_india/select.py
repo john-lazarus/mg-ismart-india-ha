@@ -9,12 +9,15 @@ from .entity import MgIndiaEntity
 async def async_setup_entry(hass, entry, async_add_entities):
     data = hass.data[DOMAIN][entry.entry_id]
     coordinator = data["coordinator"]
-    async_add_entities(
-        [
-            MgSeat(coordinator, data["client"], "driver"),
-            MgSeat(coordinator, data["client"], "passenger"),
-        ]
-    )
+    entities = []
+    if coordinator.data and coordinator.data.capabilities.heated_seats:
+        entities.extend(
+            [
+                MgSeat(coordinator, data["client"], "driver"),
+                MgSeat(coordinator, data["client"], "passenger"),
+            ]
+        )
+    async_add_entities(entities)
 
 
 class MgSeat(MgIndiaEntity, SelectEntity):
@@ -30,7 +33,11 @@ class MgSeat(MgIndiaEntity, SelectEntity):
 
     @property
     def available(self):
-        return super().available and self.client.has_pin
+        return (
+            super().available
+            and self.client.has_pin
+            and not getattr(self.coordinator, "command_in_progress", False)
+        )
 
     @property
     def current_option(self):
@@ -40,5 +47,7 @@ class MgSeat(MgIndiaEntity, SelectEntity):
         self._level = option
         driver = int(option) if self.side == "driver" else 0
         passenger = int(option) if self.side == "passenger" else 0
-        await self.client.control_heated_seats(driver, passenger)
-        await self.coordinator.async_request_refresh()
+        await self.coordinator.async_run_command(
+            f"Set {self.side} heated seat",
+            lambda: self.client.control_heated_seats(driver, passenger),
+        )

@@ -53,3 +53,8 @@ Bug-hunt/QOL pass: fixes control calls so they log in before PIN verification an
 ## v0.1.8
 
 Fixes MG India remote-control parameter payloads for door lock/unlock, climate, find-my-car, tailgate, windows, sunroof, and heated seats. Also adds a safe diagnostics boolean showing whether a control PIN is configured, without exposing the PIN or hash.
+
+
+## v0.1.9
+
+Adds an app-like per-vehicle remote-command busy state so other remote controls are unavailable while MG is processing a command, with Remote Command In Progress and Last Remote Command entities for visible feedback. Optional controls that are not reported for a vehicle, such as windows/sunroof/tailgate/heated seats, are no longer exposed by default. Control polling now retries once after a transient malformed TAP control response and waits longer for MG command completion.

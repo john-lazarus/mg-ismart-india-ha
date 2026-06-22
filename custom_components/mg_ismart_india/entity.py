@@ -35,3 +35,4 @@ class MgIndiaEntity(CoordinatorEntity):
     @property
     def caps(self):
         return self.coordinator.data.capabilities if self.coordinator.data else None
+

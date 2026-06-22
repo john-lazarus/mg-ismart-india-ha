@@ -26,7 +26,7 @@ BINS = [
 
 async def async_setup_entry(hass, entry, async_add_entities):
     c = hass.data[DOMAIN][entry.entry_id]["coordinator"]
-    async_add_entities([MgIndiaBinary(c, *b) for b in BINS])
+    async_add_entities([MgIndiaBinary(c, *b) for b in BINS] + [MgCommandInProgress(c)])
 
 
 class MgIndiaBinary(MgIndiaEntity, BinarySensorEntity):
@@ -37,3 +37,22 @@ class MgIndiaBinary(MgIndiaEntity, BinarySensorEntity):
     @property
     def is_on(self):
         return getattr(self.status, self._key, None) if self.status else None
+
+
+class MgCommandInProgress(MgIndiaEntity, BinarySensorEntity):
+    _attr_device_class = BinarySensorDeviceClass.RUNNING
+
+    def __init__(self, c):
+        super().__init__(c, "remote_command_in_progress", "Remote Command In Progress")
+
+    @property
+    def is_on(self):
+        return getattr(self.coordinator, "command_in_progress", False)
+
+    @property
+    def extra_state_attributes(self):
+        return {
+            "command": getattr(self.coordinator, "command_name", None),
+            "status": getattr(self.coordinator, "last_command_status", None),
+            "error": getattr(self.coordinator, "last_command_error", None),
+        }

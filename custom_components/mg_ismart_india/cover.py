@@ -13,9 +13,13 @@ from .entity import MgIndiaEntity
 async def async_setup_entry(hass, entry, async_add_entities):
     data = hass.data[DOMAIN][entry.entry_id]
     coordinator = data["coordinator"]
-    async_add_entities(
-        [MgWindows(coordinator, data["client"]), MgSunroof(coordinator, data["client"])]
-    )
+    entities = []
+    caps = coordinator.data.capabilities if coordinator.data else None
+    if caps and caps.window_param_ids:
+        entities.append(MgWindows(coordinator, data["client"]))
+    if caps and caps.sunroof:
+        entities.append(MgSunroof(coordinator, data["client"]))
+    async_add_entities(entities)
 
 
 class _Base(MgIndiaEntity, CoverEntity):
@@ -27,7 +31,11 @@ class _Base(MgIndiaEntity, CoverEntity):
 
     @property
     def available(self):
-        return super().available and self.client.has_pin
+        return (
+            super().available
+            and self.client.has_pin
+            and not getattr(self.coordinator, "command_in_progress", False)
+        )
 
 
 class MgWindows(_Base):
@@ -50,16 +58,16 @@ class MgWindows(_Base):
         return None if not chosen else not any(v for v in chosen if v is not None)
 
     async def async_open_cover(self, **kwargs):
-        await self.client.control_windows(
-            True, self.caps.window_param_ids or (9, 10, 11, 12)
+        await self.coordinator.async_run_command(
+            "Open windows",
+            lambda: self.client.control_windows(True, self.caps.window_param_ids),
         )
-        await self.coordinator.async_request_refresh()
 
     async def async_close_cover(self, **kwargs):
-        await self.client.control_windows(
-            False, self.caps.window_param_ids or (9, 10, 11, 12)
+        await self.coordinator.async_run_command(
+            "Close windows",
+            lambda: self.client.control_windows(False, self.caps.window_param_ids),
         )
-        await self.coordinator.async_request_refresh()
 
 
 class MgSunroof(_Base):
@@ -75,9 +83,11 @@ class MgSunroof(_Base):
         return not self.status.sunroof_open
 
     async def async_open_cover(self, **kwargs):
-        await self.client.control_sunroof(True)
-        await self.coordinator.async_request_refresh()
+        await self.coordinator.async_run_command(
+            "Open sunroof", lambda: self.client.control_sunroof(True)
+        )
 
     async def async_close_cover(self, **kwargs):
-        await self.client.control_sunroof(False)
-        await self.coordinator.async_request_refresh()
+        await self.coordinator.async_run_command(
+            "Close sunroof", lambda: self.client.control_sunroof(False)
+        )

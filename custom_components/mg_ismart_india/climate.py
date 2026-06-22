@@ -30,7 +30,11 @@ class MgClimate(MgIndiaEntity, ClimateEntity):
 
     @property
     def available(self):
-        return super().available and self.client.has_pin
+        return (
+            super().available
+            and self.client.has_pin
+            and not getattr(self.coordinator, "command_in_progress", False)
+        )
 
     @property
     def hvac_mode(self):
@@ -41,8 +45,10 @@ class MgClimate(MgIndiaEntity, ClimateEntity):
         )
 
     async def async_set_hvac_mode(self, hvac_mode):
-        await self.client.control_climate(hvac_mode == HVACMode.COOL)
-        await self.coordinator.async_request_refresh()
+        await self.coordinator.async_run_command(
+            "Turn climate on" if hvac_mode == HVACMode.COOL else "Turn climate off",
+            lambda: self.client.control_climate(hvac_mode == HVACMode.COOL),
+        )
 
     async def async_turn_on(self):
         await self.async_set_hvac_mode(HVACMode.COOL)
