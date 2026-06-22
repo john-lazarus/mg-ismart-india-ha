@@ -20,5 +20,18 @@
     "error": {
       "cannot_connect": "Could not connect or authenticate. Check the 10 digit Indian mobile number and MG iSMART password."
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "MG iSMART India options",
+        "description": "Vehicle control PIN is currently {pin_status}. Enter a new PIN to enable or update remote controls. Leave it blank to keep the current PIN. Tick clear to remove the saved PIN and disable controls.",
+        "data": {
+          "pin": "Vehicle control PIN",
+          "clear_pin": "Clear saved vehicle control PIN"
+        }
+      }
+    },
+    "error": {}
   }
 }

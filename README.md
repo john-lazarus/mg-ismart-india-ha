@@ -33,3 +33,8 @@ Adds MG iSMART India brand assets for HACS/Home Assistant using the supplied MG 
 ## v0.1.4
 
 Exposes PIN-gated remote control entities even when the India feature endpoint does not report capabilities: climate, door lock, windows, sunroof, find my car, tailgate, and heated seats. Controls still require the vehicle control PIN to be configured.
+
+
+## v0.1.5
+
+Adds a proper options/configure workflow for entering, updating, or clearing the vehicle control PIN after initial setup. The integration reloads after options changes so remote-control entities become available without deleting and recreating the integration.

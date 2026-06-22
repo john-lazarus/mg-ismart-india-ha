@@ -26,6 +26,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         data.get(CONF_PIN_HASH))
     coordinator = MgIndiaCoordinator(hass, client)
     await coordinator.async_config_entry_first_refresh()
+    entry.async_on_unload(entry.add_update_listener(async_update_options))
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
         "client": client, "coordinator": coordinator}
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
@@ -37,3 +38,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if ok:
         hass.data[DOMAIN].pop(entry.entry_id, None)
     return ok
+
+
+async def async_update_options(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    await hass.config_entries.async_reload(entry.entry_id)

@@ -7,8 +7,21 @@ from .api import MgIndiaClient, MgIndiaApiError, hash_control_pin
 from .const import CONF_PASSWORD, CONF_PHONE, CONF_PIN_HASH, CONF_VEHICLE_NAME, CONF_VIN, DOMAIN
 
 
+def options_from_user_input(user_input: dict[str, Any]) -> dict[str, Any]:
+    if user_input.get("clear_pin"):
+        return {CONF_PIN_HASH: ""}
+    pin = user_input.get("pin")
+    if pin:
+        return {CONF_PIN_HASH: hash_control_pin(pin)}
+    return {}
+
+
 class MgIndiaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
+
+    @staticmethod
+    def async_get_options_flow(config_entry):
+        return MgIndiaOptionsFlow(config_entry)
     def __init__(self):
         self._base = {}
         self._vehicles = []
@@ -65,3 +78,23 @@ class MgIndiaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     CONF_VEHICLE_NAME: v.name})
         return self.async_show_form(step_id="vehicle", data_schema=vol.Schema({vol.Required(
             CONF_VIN): vol.In({v.vin: f"{v.name} ({v.vin[-6:]})" for v in self._vehicles})}))
+
+
+class MgIndiaOptionsFlow(config_entries.OptionsFlow):
+    def __init__(self, config_entry):
+        self.config_entry = config_entry
+
+    async def async_step_init(self, user_input: dict[str, Any] | None = None):
+        if user_input is not None:
+            options = {**self.config_entry.options}
+            options.update(options_from_user_input(user_input))
+            return self.async_create_entry(title="", data=options)
+        has_pin = bool(self.config_entry.options.get(CONF_PIN_HASH) or self.config_entry.data.get(CONF_PIN_HASH))
+        return self.async_show_form(
+            step_id="init",
+            data_schema=vol.Schema({
+                vol.Optional("pin"): str,
+                vol.Optional("clear_pin", default=False): bool,
+            }),
+            description_placeholders={"pin_status": "configured" if has_pin else "not configured"},
+        )
