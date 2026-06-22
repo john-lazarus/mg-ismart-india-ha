@@ -23,3 +23,8 @@ Fixes India TAP login/gateway authentication, vehicle list parsing, status polli
 ## v0.1.2
 
 Filters the MG India stale driver-window false-positive seen when the vehicle is otherwise closed and locked. Adds a Refresh Status button so Home Assistant can request fresh values on demand.
+
+
+## v0.1.3
+
+Adds MG iSMART India brand assets for HACS/Home Assistant using the supplied MG logo.
