@@ -447,40 +447,45 @@ class MgIndiaClient:
     async def verify_pin(self) -> None:
         if not self.pin_hash:
             raise MgIndiaApiError("Control PIN is not configured")
-        if not self.token or not self.uid:
-            await self.login()
-        if not self.vin:
-            await self.vehicles()
-        body = encode_pin_request(
-            self.uid or "0" * 50,
-            self.token or "0" * 40,
-            self.vin or "",
-            self._next_event(),
-            self.pin_hash,
-        )
-        async with self.session.post(
-            TAP_LOGIN_URL,
-            data=body,
-            headers={
-                "User-Agent": USER_AGENT,
-                "Content-Type": "text/plain",
-                "Accept": "*/*",
-                "Accept-Language": "en-US;q=1",
-                "APP-SIGNATURE": tap_signature(body),
-                "SIGNATURE": "1",
-            },
-            timeout=30,
-        ) as response:
-            text = await response.text()
-            if response.status >= 400:
-                raise MgIndiaApiError(
-                    f"PIN verification failed: HTTP {response.status}"
-                )
-        dispatcher = decode_pin_response(text)
-        if dispatcher.get("result", 0) != 0:
-            raise MgIndiaApiError(
-                f"PIN verification failed: result {dispatcher.get('result')}"
+        for login_attempt in range(2):
+            if not self.token or not self.uid:
+                await self.login()
+            if not self.vin:
+                await self.vehicles()
+            body = encode_pin_request(
+                self.uid or "0" * 50,
+                self.token or "0" * 40,
+                self.vin or "",
+                self._next_event(),
+                self.pin_hash,
             )
+            async with self.session.post(
+                TAP_LOGIN_URL,
+                data=body,
+                headers={
+                    "User-Agent": USER_AGENT,
+                    "Content-Type": "text/plain",
+                    "Accept": "*/*",
+                    "Accept-Language": "en-US;q=1",
+                    "APP-SIGNATURE": tap_signature(body),
+                    "SIGNATURE": "1",
+                },
+                timeout=30,
+            ) as response:
+                text = await response.text()
+                if response.status >= 400:
+                    raise MgIndiaApiError(
+                        f"PIN verification failed: HTTP {response.status}"
+                    )
+            dispatcher = decode_pin_response(text)
+            result = dispatcher.get("result", 0)
+            if result == 0:
+                return
+            if result == 2 and login_attempt == 0:
+                await self.login()
+                continue
+            raise MgIndiaApiError(f"PIN verification failed: result {result}")
+        raise MgIndiaApiError("PIN verification failed after token refresh")
 
     async def _control(
         self, name: str, typ: int, params: list[tuple[int, bytes]]

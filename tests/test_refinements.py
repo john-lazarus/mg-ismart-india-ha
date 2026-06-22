@@ -403,3 +403,36 @@ def test_door_lock_treats_timeout_as_success_when_status_matches(monkeypatch):
         assert calls == [("Door lock", 1, [])]
 
     asyncio.run(run())
+
+
+def test_verify_pin_refreshes_session_when_tap_returns_result_2(monkeypatch):
+    async def run():
+        client = MgIndiaClient(
+            _Session(),
+            "9876543210",
+            "secret",
+            vin="VIN12345678901234",
+            pin_hash="A" * 32,
+        )
+        client.uid = "old_uid"
+        client.token = "old_token"
+        logins = []
+        responses = [{"result": 2}, {"result": 0}]
+
+        async def login():
+            logins.append("login")
+            client.uid = "uid"
+            client.token = "token"
+
+        monkeypatch.setattr(client, "login", login)
+        monkeypatch.setattr(
+            "custom_components.mg_ismart_india.api.client.decode_pin_response",
+            lambda _text: responses.pop(0),
+        )
+
+        await client.verify_pin()
+
+        assert logins == ["login"]
+        assert client.session.posts == 2
+
+    asyncio.run(run())

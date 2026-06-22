@@ -63,3 +63,8 @@ Adds an app-like per-vehicle remote-command busy state so other remote controls 
 ## v0.1.10
 
 Retries transient malformed TAP login responses seen immediately after Home Assistant restart, reducing startup unavailable states that required manual integration reload. Door lock/unlock now treats a vendor command timeout as success only if a fresh status read proves the requested lock state was actually reached.
+
+
+## v0.1.11
+
+Fixes ZS/Astor lock commands failing at PIN verification with TAP result 2 by refreshing the TAP session and retrying PIN verification once before sending the remote-control command.
