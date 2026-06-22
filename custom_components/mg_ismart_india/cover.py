@@ -1,6 +1,10 @@
 from __future__ import annotations
 
-from homeassistant.components.cover import CoverDeviceClass, CoverEntity, CoverEntityFeature
+from homeassistant.components.cover import (
+    CoverDeviceClass,
+    CoverEntity,
+    CoverEntityFeature,
+)
 
 from .const import DOMAIN
 from .entity import MgIndiaEntity
@@ -9,7 +13,9 @@ from .entity import MgIndiaEntity
 async def async_setup_entry(hass, entry, async_add_entities):
     data = hass.data[DOMAIN][entry.entry_id]
     coordinator = data["coordinator"]
-    async_add_entities([MgWindows(coordinator, data["client"]), MgSunroof(coordinator, data["client"])])
+    async_add_entities(
+        [MgWindows(coordinator, data["client"]), MgSunroof(coordinator, data["client"])]
+    )
 
 
 class _Base(MgIndiaEntity, CoverEntity):
@@ -44,11 +50,15 @@ class MgWindows(_Base):
         return None if not chosen else not any(v for v in chosen if v is not None)
 
     async def async_open_cover(self, **kwargs):
-        await self.client.control_windows(True, self.caps.window_param_ids or (9, 10, 11, 12))
+        await self.client.control_windows(
+            True, self.caps.window_param_ids or (9, 10, 11, 12)
+        )
         await self.coordinator.async_request_refresh()
 
     async def async_close_cover(self, **kwargs):
-        await self.client.control_windows(False, self.caps.window_param_ids or (9, 10, 11, 12))
+        await self.client.control_windows(
+            False, self.caps.window_param_ids or (9, 10, 11, 12)
+        )
         await self.coordinator.async_request_refresh()
 
 

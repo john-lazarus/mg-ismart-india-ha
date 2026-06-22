@@ -1,6 +1,10 @@
 from __future__ import annotations
 
-from homeassistant.components.climate import ClimateEntity, ClimateEntityFeature, HVACMode
+from homeassistant.components.climate import (
+    ClimateEntity,
+    ClimateEntityFeature,
+    HVACMode,
+)
 from homeassistant.const import UnitOfTemperature
 
 from .const import DOMAIN
@@ -14,7 +18,9 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
 
 class MgClimate(MgIndiaEntity, ClimateEntity):
-    _attr_supported_features = ClimateEntityFeature.TURN_ON | ClimateEntityFeature.TURN_OFF
+    _attr_supported_features = (
+        ClimateEntityFeature.TURN_ON | ClimateEntityFeature.TURN_OFF
+    )
     _attr_hvac_modes = [HVACMode.OFF, HVACMode.COOL]
     _attr_temperature_unit = UnitOfTemperature.CELSIUS
 
@@ -28,7 +34,11 @@ class MgClimate(MgIndiaEntity, ClimateEntity):
 
     @property
     def hvac_mode(self):
-        return HVACMode.COOL if self.status and self.status.climate_running else HVACMode.OFF
+        return (
+            HVACMode.COOL
+            if self.status and self.status.climate_running
+            else HVACMode.OFF
+        )
 
     async def async_set_hvac_mode(self, hvac_mode):
         await self.client.control_climate(hvac_mode == HVACMode.COOL)

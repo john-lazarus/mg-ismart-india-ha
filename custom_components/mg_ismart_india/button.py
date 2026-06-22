@@ -11,8 +11,16 @@ async def async_setup_entry(hass, entry, async_add_entities):
     coordinator = data["coordinator"]
     entities = [
         MgRefreshButton(coordinator),
-        MgButton(coordinator, data["client"], "find_my_car", "Find My Car", "find_my_car"),
-        MgButton(coordinator, data["client"], "release_tailgate", "Release Tailgate", "release_tailgate"),
+        MgButton(
+            coordinator, data["client"], "find_my_car", "Find My Car", "find_my_car"
+        ),
+        MgButton(
+            coordinator,
+            data["client"],
+            "release_tailgate",
+            "Release Tailgate",
+            "release_tailgate",
+        ),
     ]
     async_add_entities(entities)
 

@@ -22,7 +22,9 @@ def normalize_phone(phone: str) -> str:
 
 
 def make_device_id(phone: str) -> str:
-    seed = hashlib.sha256(f"mg-ismart-india:{normalize_phone(phone)}".encode()).hexdigest()
+    seed = hashlib.sha256(
+        f"mg-ismart-india:{normalize_phone(phone)}".encode()
+    ).hexdigest()
     return (f"haos-mg-ismart-india-{seed}" + "0" * 120)[:103]
 
 
@@ -31,21 +33,19 @@ def md5_hex(value: str) -> str:
 
 
 def tap_signature(body: str) -> str:
-    key = md5_hex(body[1: len(body) // 2])
+    key = md5_hex(body[1 : len(body) // 2])
     return hmac.new(key.encode(), body.encode(), hashlib.sha256).hexdigest()
 
 
 def gateway_signature(
-        path: str,
-        timestamp: str,
-        content_type: str = "application/json") -> str:
+    path: str, timestamp: str, content_type: str = "application/json"
+) -> str:
     part1 = md5_hex(path)
     part2 = md5_hex(part1 + timestamp + "1" + content_type)
     key = md5_hex(part2 + timestamp)
     return hmac.new(
-        key.encode(),
-        (path + timestamp + "1" + content_type).encode(),
-        hashlib.sha256).hexdigest()
+        key.encode(), (path + timestamp + "1" + content_type).encode(), hashlib.sha256
+    ).hexdigest()
 
 
 def hash_control_pin(pin: str) -> str:
@@ -57,10 +57,16 @@ def hash_control_pin(pin: str) -> str:
 
 def decrypt_gateway_body(encrypted: str, headers: Any) -> str:
     timestamp = headers.get("APP-SEND-DATE") or headers.get("app-send-date") or ""
-    content_type = headers.get("ORIGINAL-CONTENT-TYPE") or headers.get("original-content-type") or "application/json"
+    content_type = (
+        headers.get("ORIGINAL-CONTENT-TYPE")
+        or headers.get("original-content-type")
+        or "application/json"
+    )
     key = md5_hex(timestamp + "1" + content_type)
     iv = md5_hex(timestamp)
     return unpad(
-        AES.new(unhexlify(key), AES.MODE_CBC, unhexlify(iv)).decrypt(unhexlify(encrypted)),
+        AES.new(unhexlify(key), AES.MODE_CBC, unhexlify(iv)).decrypt(
+            unhexlify(encrypted)
+        ),
         AES.block_size,
     ).decode()

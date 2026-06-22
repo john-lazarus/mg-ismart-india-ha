@@ -9,17 +9,21 @@ from .entity import MgIndiaEntity
 async def async_setup_entry(hass, entry, async_add_entities):
     data = hass.data[DOMAIN][entry.entry_id]
     coordinator = data["coordinator"]
-    async_add_entities([
-        MgSeat(coordinator, data["client"], "driver"),
-        MgSeat(coordinator, data["client"], "passenger"),
-    ])
+    async_add_entities(
+        [
+            MgSeat(coordinator, data["client"], "driver"),
+            MgSeat(coordinator, data["client"], "passenger"),
+        ]
+    )
 
 
 class MgSeat(MgIndiaEntity, SelectEntity):
     _attr_options = ["0", "1", "2", "3"]
 
     def __init__(self, coordinator, client, side):
-        super().__init__(coordinator, f"{side}_heated_seat", f"{side.title()} Heated Seat")
+        super().__init__(
+            coordinator, f"{side}_heated_seat", f"{side.title()} Heated Seat"
+        )
         self.client = client
         self.side = side
         self._level = "0"

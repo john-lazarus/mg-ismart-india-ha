@@ -43,3 +43,8 @@ Adds a proper options/configure workflow for entering, updating, or clearing the
 ## v0.1.6
 
 Fixes the Configure/options gear error on current Home Assistant versions by using the new OptionsFlow config_entry API. Also adds the missing climate temperature unit required by Home Assistant when adding the vehicle AC control entity.
+
+
+## v0.1.7
+
+Bug-hunt/QOL pass: fixes control calls so they log in before PIN verification and poll using the returned event id, redacts phone/VIN/PIN/password from diagnostics, handles invalid PINs in the options flow without a UI crash, increases status polling tolerance, and adds regression tests for these paths.

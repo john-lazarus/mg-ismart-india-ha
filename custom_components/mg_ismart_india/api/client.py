@@ -8,10 +8,30 @@ from urllib.parse import urlencode
 
 from aiohttp import ClientSession
 
-from .bitcodec import PackedBitReader, PackedBitWriter, read_fixed_7bit, set_fixed_7bit, set_msb_bits
-from .crypto import MgIndiaApiError, decrypt_gateway_body, gateway_signature, make_device_id, normalize_phone, tap_signature
+from .bitcodec import (
+    PackedBitReader,
+    PackedBitWriter,
+    read_fixed_7bit,
+    set_fixed_7bit,
+    set_msb_bits,
+)
+from .crypto import (
+    MgIndiaApiError,
+    decrypt_gateway_body,
+    gateway_signature,
+    make_device_id,
+    normalize_phone,
+    tap_signature,
+)
 from .models import Capabilities, Snapshot, Status, Vehicle
-from .tap import decode_control_response, decode_pin_response, decode_status_response, encode_control_request, encode_pin_request, encode_status_request
+from .tap import (
+    decode_control_response,
+    decode_pin_response,
+    decode_status_response,
+    encode_control_request,
+    encode_pin_request,
+    encode_status_request,
+)
 
 TAP_LOGIN_URL = "https://iov-tap.mgindia.co.in/TAP.Web/ota.mp"
 TAP_STATUS_URL = "https://iov-tap.mgindia.co.in/TAP.Web/ota.mpv21"
@@ -19,6 +39,8 @@ GATEWAY_BASE = "https://iov-gateway.mgindia.co.in/api.app/v1"
 USER_AGENT = "CER_IKE_01/2.3.0 (iPad; iOS 26.3; Scale/2.00)"
 CONTROL_ATTEMPTS = 8
 CONTROL_DELAY = 2.0
+STATUS_ATTEMPTS = 10
+STATUS_DELAY = 1.5
 LOGIN_DISPATCHER_TEMPLATE_HEX = (
     "11005600882c60c183060c183060c183060c183060c183060c183060c183060c183060c183"
     "060c183060c183060c183060c1ab06200000000020200468acf134468acf1342468acf134"
@@ -68,7 +90,12 @@ def parse_vehicle(raw: dict[str, Any]) -> Vehicle:
     vin = raw.get("vin") or raw.get("VIN") or raw.get("vinNo") or raw.get("vehicleVin")
     if not vin:
         raise MgIndiaApiError("Vehicle response did not include a VIN")
-    name = raw.get("series") or raw.get("modelName") or raw.get("brandName") or str(vin)[-6:]
+    name = (
+        raw.get("series")
+        or raw.get("modelName")
+        or raw.get("brandName")
+        or str(vin)[-6:]
+    )
     return Vehicle(
         str(vin),
         str(name),
@@ -98,17 +125,19 @@ def parse_status(raw: dict[str, Any]) -> Status:
     if (
         driver_window is True
         and locked is True
-        and not any((
-            driver_door,
-            passenger_door,
-            rear_left_door,
-            rear_right_door,
-            boot,
-            bonnet,
-            passenger_window,
-            rear_left_window,
-            rear_right_window,
-        ))
+        and not any(
+            (
+                driver_door,
+                passenger_door,
+                rear_left_door,
+                rear_right_door,
+                boot,
+                bonnet,
+                passenger_window,
+                rear_left_window,
+                rear_right_window,
+            )
+        )
     ):
         driver_window = False
     return Status(
@@ -125,7 +154,9 @@ def parse_status(raw: dict[str, Any]) -> Status:
         rear_left_window_open=rear_left_window,
         rear_right_window_open=rear_right_window,
         sunroof_open=_bool(basic.get("sunroofStatus")),
-        climate_running=(basic.get("remoteClimateStatus") in (2, 3)) if basic.get("remoteClimateStatus") is not None else None,
+        climate_running=(basic.get("remoteClimateStatus") in (2, 3))
+        if basic.get("remoteClimateStatus") is not None
+        else None,
         interior_temperature=_int(basic.get("interiorTemperature"), -60, 90),
         exterior_temperature=_int(basic.get("exteriorTemperature"), -60, 90),
         fuel_level=_int(basic.get("fuelLevelPrc"), 0, 100),
@@ -145,7 +176,11 @@ def discover_capabilities(payloads: list[dict[str, Any]]) -> Capabilities:
     for payload in payloads:
         if not isinstance(payload, dict):
             continue
-        for block in (payload.get("configuration"), payload.get("config"), payload.get("modelConfig")):
+        for block in (
+            payload.get("configuration"),
+            payload.get("config"),
+            payload.get("modelConfig"),
+        ):
             if isinstance(block, dict):
                 cfg.update(block)
         for item in _as_list(payload):
@@ -162,7 +197,9 @@ def discover_capabilities(payloads: list[dict[str, Any]]) -> Capabilities:
     remote = enabled(cfg.get("S61")) or bool(feature_ids)
     mask = str(cfg.get("WINDOW") or "")
     windows = tuple(
-        pid for flag, pid in zip(mask, (9, 10, 11, 12), strict=False) if flag.upper() in {"1", "Y", "T"}
+        pid
+        for flag, pid in zip(mask, (9, 10, 11, 12), strict=False)
+        if flag.upper() in {"1", "Y", "T"}
     )
     return Capabilities(
         climate=enabled(cfg.get("T11")) or 2 in feature_ids,
@@ -203,7 +240,14 @@ def decode_login_response(raw: str) -> tuple[str, str]:
 
 
 class MgIndiaClient:
-    def __init__(self, session: ClientSession, phone: str, password: str, vin: str | None = None, pin_hash: str | None = None) -> None:
+    def __init__(
+        self,
+        session: ClientSession,
+        phone: str,
+        password: str,
+        vin: str | None = None,
+        pin_hash: str | None = None,
+    ) -> None:
         self.session = session
         self.phone = normalize_phone(phone)
         self.password = password
@@ -221,7 +265,7 @@ class MgIndiaClient:
         return bool(self.pin_hash)
 
     def _next_event(self) -> int:
-        self._event = (self._event + 1) & 0x7fffffff
+        self._event = (self._event + 1) & 0x7FFFFFFF
         return self._event
 
     def _build_login_body(self) -> str:
@@ -246,13 +290,17 @@ class MgIndiaClient:
             "APP-SIGNATURE": tap_signature(body),
             "SIGNATURE": "1",
         }
-        async with self.session.post(TAP_LOGIN_URL, data=body, headers=headers, timeout=30) as response:
+        async with self.session.post(
+            TAP_LOGIN_URL, data=body, headers=headers, timeout=30
+        ) as response:
             text = await response.text()
             if response.status >= 400:
                 raise MgIndiaApiError(f"Login failed: HTTP {response.status}")
         self.uid, self.token = decode_login_response(text)
 
-    async def gateway_get(self, path: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
+    async def gateway_get(
+        self, path: str, params: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         if not self.token or not self.uid:
             await self.login()
         clean_path = "/" + path.lstrip("/")
@@ -268,27 +316,38 @@ class MgIndiaClient:
             "APP-LOGIN-TOKEN": self.token or "",
             "APP-USER-ID": self.uid or "",
             "APP-SEND-DATE": timestamp,
-            "APP-VERIFICATION-STRING": gateway_signature(signing_path, timestamp, content_type),
+            "APP-VERIFICATION-STRING": gateway_signature(
+                signing_path, timestamp, content_type
+            ),
             "ORIGINAL-CONTENT-TYPE": content_type,
         }
-        async with self.session.get(GATEWAY_BASE + clean_path, params=params, headers=headers, timeout=30) as response:
+        async with self.session.get(
+            GATEWAY_BASE + clean_path, params=params, headers=headers, timeout=30
+        ) as response:
             text = await response.text()
             if response.status >= 400:
-                raise MgIndiaApiError(f"Gateway {clean_path} failed: HTTP {response.status}")
+                raise MgIndiaApiError(
+                    f"Gateway {clean_path} failed: HTTP {response.status}"
+                )
             headers_out = response.headers
         parsed = json.loads(decrypt_gateway_body(text, headers_out))
         if parsed.get("code") == 7:
             await self.login()
             return await self.gateway_get(path, params)
         if parsed.get("code") not in (0, None):
-            raise MgIndiaApiError(parsed.get("message") or f"Gateway error code {parsed.get('code')}")
+            raise MgIndiaApiError(
+                parsed.get("message") or f"Gateway error code {parsed.get('code')}"
+            )
         return parsed
 
     async def vehicles(self) -> list[Vehicle]:
         data = await self.gateway_get("/vehicle/userVinList")
         vehicles = [parse_vehicle(x) for x in _as_list(data) if isinstance(x, dict)]
         if self.vin:
-            self.vehicle = next((v for v in vehicles if v.vin == self.vin), vehicles[0] if vehicles else None)
+            self.vehicle = next(
+                (v for v in vehicles if v.vin == self.vin),
+                vehicles[0] if vehicles else None,
+            )
         elif vehicles:
             self.vehicle = vehicles[0]
             self.vin = self.vehicle.vin
@@ -316,14 +375,27 @@ class MgIndiaClient:
             await self.login()
         if not self.vin:
             await self.vehicles()
-        headers_base = {"User-Agent": USER_AGENT, "Content-Type": "text/plain", "Accept": "*/*", "Accept-Language": "en-US;q=1", "SIGNATURE": "1"}
+        headers_base = {
+            "User-Agent": USER_AGENT,
+            "Content-Type": "text/plain",
+            "Accept": "*/*",
+            "Accept-Language": "en-US;q=1",
+            "SIGNATURE": "1",
+        }
         for login_attempt in range(2):
             event_id = 0
-            for attempt in range(6):
-                body = encode_status_request(self.uid or "0" * 50, self.token or "0" * 40, self.vin or "", event_id)
+            for attempt in range(STATUS_ATTEMPTS):
+                body = encode_status_request(
+                    self.uid or "0" * 50,
+                    self.token or "0" * 40,
+                    self.vin or "",
+                    event_id,
+                )
                 headers = dict(headers_base)
                 headers["APP-SIGNATURE"] = tap_signature(body)
-                async with self.session.post(TAP_STATUS_URL, data=body, headers=headers, timeout=30) as response:
+                async with self.session.post(
+                    TAP_STATUS_URL, data=body, headers=headers, timeout=30
+                ) as response:
                     text = await response.text()
                     if response.status >= 400:
                         raise MgIndiaApiError(f"Status failed: HTTP {response.status}")
@@ -339,8 +411,8 @@ class MgIndiaClient:
                 if result not in (0, 4, 6):
                     raise MgIndiaApiError(f"Status failed: result {result}")
                 event_id = dispatcher.get("eventID", event_id)
-                if attempt < 5:
-                    await asyncio.sleep(1)
+                if attempt < STATUS_ATTEMPTS - 1:
+                    await asyncio.sleep(STATUS_DELAY)
             else:
                 raise MgIndiaApiError("Vehicle status was not ready after polling")
         raise MgIndiaApiError("Status failed after token refresh")
@@ -350,44 +422,95 @@ class MgIndiaClient:
             await self.vehicles()
         caps = await self.refresh_capabilities()
         status = await self.status()
-        return Snapshot(self.vehicle or Vehicle(self.vin or "unknown", self.vin or "unknown"), caps, status)
+        return Snapshot(
+            self.vehicle or Vehicle(self.vin or "unknown", self.vin or "unknown"),
+            caps,
+            status,
+        )
 
     async def verify_pin(self) -> None:
         if not self.pin_hash:
             raise MgIndiaApiError("Control PIN is not configured")
-        body = encode_pin_request(self.uid or "0" * 50, self.token or "0" * 40, self.vin or "", self._next_event(), self.pin_hash)
+        if not self.token or not self.uid:
+            await self.login()
+        if not self.vin:
+            await self.vehicles()
+        body = encode_pin_request(
+            self.uid or "0" * 50,
+            self.token or "0" * 40,
+            self.vin or "",
+            self._next_event(),
+            self.pin_hash,
+        )
         async with self.session.post(
             TAP_LOGIN_URL,
             data=body,
-            headers={"User-Agent": USER_AGENT, "Content-Type": "text/plain", "Accept": "*/*", "Accept-Language": "en-US;q=1", "APP-SIGNATURE": tap_signature(body), "SIGNATURE": "1"},
+            headers={
+                "User-Agent": USER_AGENT,
+                "Content-Type": "text/plain",
+                "Accept": "*/*",
+                "Accept-Language": "en-US;q=1",
+                "APP-SIGNATURE": tap_signature(body),
+                "SIGNATURE": "1",
+            },
             timeout=30,
         ) as response:
             text = await response.text()
             if response.status >= 400:
-                raise MgIndiaApiError(f"PIN verification failed: HTTP {response.status}")
+                raise MgIndiaApiError(
+                    f"PIN verification failed: HTTP {response.status}"
+                )
         dispatcher = decode_pin_response(text)
         if dispatcher.get("result", 0) != 0:
-            raise MgIndiaApiError(f"PIN verification failed: result {dispatcher.get('result')}")
+            raise MgIndiaApiError(
+                f"PIN verification failed: result {dispatcher.get('result')}"
+            )
 
-    async def _control(self, name: str, typ: int, params: list[tuple[int, bytes]]) -> None:
+    async def _control(
+        self, name: str, typ: int, params: list[tuple[int, bytes]]
+    ) -> None:
         await self.verify_pin()
+        event_id = 0
         for attempt in range(CONTROL_ATTEMPTS):
-            body = encode_control_request(self.uid or "0" * 50, self.token or "0" * 40, self.vin or "", self._next_event(), typ, params)
+            body = encode_control_request(
+                self.uid or "0" * 50,
+                self.token or "0" * 40,
+                self.vin or "",
+                event_id,
+                typ,
+                params,
+            )
             async with self.session.post(
                 TAP_STATUS_URL,
                 data=body,
-                headers={"User-Agent": USER_AGENT, "Content-Type": "text/plain", "Accept": "*/*", "Accept-Language": "en-US;q=1", "APP-SIGNATURE": tap_signature(body), "SIGNATURE": "1"},
+                headers={
+                    "User-Agent": USER_AGENT,
+                    "Content-Type": "text/plain",
+                    "Accept": "*/*",
+                    "Accept-Language": "en-US;q=1",
+                    "APP-SIGNATURE": tap_signature(body),
+                    "SIGNATURE": "1",
+                },
                 timeout=30,
             ) as response:
                 text = await response.text()
                 if response.status >= 400:
                     raise MgIndiaApiError(f"{name} failed: HTTP {response.status}")
             dispatcher, control = decode_control_response(text)
-            if dispatcher.get("result", 0) == 3 and attempt == 0:
+            result = dispatcher.get("result", 0)
+            if result in (2, 3) and attempt == 0:
                 await self.login()
+                event_id = 0
                 continue
-            if control and control.get("rvcReqSts") == b"\x02":
-                return
+            if control:
+                status = control.get("rvcReqSts")
+                if status == b"\x02":
+                    return
+                if status not in (None, b"\x01"):
+                    raise MgIndiaApiError(f"{name} failed: status {status!r}")
+            if result not in (0, 4, 6):
+                raise MgIndiaApiError(f"{name} failed: result {result}")
+            event_id = dispatcher.get("eventID", event_id)
             if attempt < CONTROL_ATTEMPTS - 1:
                 await asyncio.sleep(CONTROL_DELAY)
         raise MgIndiaApiError(f"{name} did not complete")
@@ -396,7 +519,9 @@ class MgIndiaClient:
         await self._control("Climate", 6, [(1, b"\x01" if on else b"\x00")])
 
     async def control_door_lock(self, lock: bool) -> None:
-        await self._control("Door lock", 1 if lock else 2, [(1, b"\x01" if lock else b"\x00")])
+        await self._control(
+            "Door lock", 1 if lock else 2, [(1, b"\x01" if lock else b"\x00")]
+        )
 
     async def find_my_car(self) -> None:
         await self._control("Find my car", 5, [(1, b"\x01")])
@@ -412,4 +537,6 @@ class MgIndiaClient:
         await self._control("Sunroof", 3, [(13, b"\x03" if open_sunroof else b"\x00")])
 
     async def control_heated_seats(self, driver: int, passenger: int) -> None:
-        await self._control("Heated seats", 8, [(20, bytes([driver])), (21, bytes([passenger]))])
+        await self._control(
+            "Heated seats", 8, [(20, bytes([driver])), (21, bytes([passenger]))]
+        )

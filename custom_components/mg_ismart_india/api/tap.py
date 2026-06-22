@@ -58,7 +58,12 @@ def _frame_v21(dispatcher: bytes, app: bytes) -> str:
     dispatcher_length = len(dispatcher) + 3
     if dispatcher_length > 255:
         raise ValueError("TAP dispatcher too large")
-    payload = bytes((TAP_PROTOCOL_VERSION, dispatcher_length, 0)) + bytes(TAP_RESERVED_SIZE) + dispatcher + app
+    payload = (
+        bytes((TAP_PROTOCOL_VERSION, dispatcher_length, 0))
+        + bytes(TAP_RESERVED_SIZE)
+        + dispatcher
+        + app
+    )
     return "1" + f"{len(payload) + 3:04X}" + payload.hex().upper()
 
 
@@ -117,7 +122,9 @@ def encode_control_request(
     return _frame_v21(_dispatcher(uid, token, vin, CONTROL_APP_ID, app, event_id), app)
 
 
-def encode_pin_request(uid: str, token: str, vin: str, event_id: int, pin_hash: str) -> str:
+def encode_pin_request(
+    uid: str, token: str, vin: str, event_id: int, pin_hash: str
+) -> str:
     app = codec11().encode("PINVerificationReq", {"pin": pin_hash})
     body = codec11().encode(
         "MPDispatcherBodyV11",
@@ -158,7 +165,7 @@ def _decode_v21(raw: str) -> tuple[dict[str, Any], bytes | None]:
     app_length = dispatcher.get("applicationDataLength", 0) or 0
     if not app_length:
         return dispatcher, None
-    app = data[dispatcher_end: dispatcher_end + app_length]
+    app = data[dispatcher_end : dispatcher_end + app_length]
     if len(app) != app_length:
         raise ValueError("truncated TAP app data")
     return dispatcher, app

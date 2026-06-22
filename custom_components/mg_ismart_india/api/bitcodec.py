@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import math
@@ -14,7 +13,9 @@ class PackedBitReader:
         for _ in range(count):
             absolute = self.offset
             self.offset += 1
-            value = (value << 1) | ((self.data[absolute // 8] >> (7 - absolute % 8)) & 1)
+            value = (value << 1) | (
+                (self.data[absolute // 8] >> (7 - absolute % 8)) & 1
+            )
         return value
 
     def read_string(self, minimum: int, maximum: int) -> str:
@@ -45,7 +46,7 @@ class PackedBitWriter:
         out = bytearray()
         for start in range(0, len(self.bits), 8):
             val = 0
-            chunk = self.bits[start:start + 8]
+            chunk = self.bits[start : start + 8]
             for bit in chunk:
                 val = (val << 1) | bit
             out.append(val << (8 - len(chunk)))

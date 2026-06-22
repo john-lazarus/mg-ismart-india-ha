@@ -32,6 +32,8 @@
         }
       }
     },
-    "error": {}
+    "error": {
+      "invalid_pin": "Use a 4 to 8 digit vehicle control PIN."
+    }
   }
 }
