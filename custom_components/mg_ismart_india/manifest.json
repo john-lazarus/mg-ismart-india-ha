@@ -8,11 +8,11 @@
   "documentation": "https://github.com/john-lazarus/mg-ismart-india-ha",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/john-lazarus/mg-ismart-india-ha/issues",
+  "loggers": [
+    "mg_ismart_india_client"
+  ],
   "requirements": [
     "mg-ismart-india-client==0.2.1"
   ],
-  "version": "0.2.0",
-  "loggers": [
-    "mg_ismart_india_client"
-  ]
+  "version": "0.2.0"
 }

@@ -75,4 +75,4 @@ Fixes ZS/Astor lock commands failing at PIN verification with TAP result 2 by re
 
 ## v0.2.0
 
-Uses the mg-ismart-india-client 0.2.1 package instead of the bundled protocol code. Adds EV battery and charging sensors (Battery, Charging, Plugged In, Charge Time Remaining, Charging Duration) for electric models.
+Uses the mg-ismart-india-client 0.2.1 package instead of the bundled protocol code. Adds EV battery and charging sensors (Battery, Charging, Plugged In, Charge Time Remaining, Charging Duration) for electric models. The control PIN is 4 digits, and a remote command whose result the car can't confirm now reports an error instead of being resent.

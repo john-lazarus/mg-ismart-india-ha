@@ -10,7 +10,13 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
-from mg_ismart_india_client import MgIndiaApiError, MgIndiaClient, Snapshot
+from aiohttp import ClientError
+from mg_ismart_india_client import (
+    MgIndiaApiError,
+    MgIndiaClient,
+    MgIndiaLoginRejected,
+    Snapshot,
+)
 
 from .const import DEFAULT_SCAN_INTERVAL_SECONDS, DOMAIN
 
@@ -46,7 +52,7 @@ def is_electric(vehicle) -> bool:
         return True
     if str(_vehicle_config(vehicle, "BType", "")).strip() == "1":
         return True
-    return any(token in text for token in ("electric", " ev", "comet", "zs", "windsor"))
+    return any(token in text for token in ("electric", " ev", "comet", "windsor"))
 
 
 class MgIndiaCoordinator(DataUpdateCoordinator):
@@ -74,7 +80,13 @@ class MgIndiaCoordinator(DataUpdateCoordinator):
         # Same as client.snapshot(), but the single status poll also asks for
         # the charging frame (status.charge stays None when none arrives).
         caps = await c.refresh_capabilities()
-        status = await c.status(include_charge=True)
+        try:
+            status = await c.status(include_charge=True)
+        except MgIndiaLoginRejected:
+            raise
+        except (ClientError, TimeoutError, MgIndiaApiError) as err:
+            _LOGGER.warning("EV charge poll failed, using status only: %s", err)
+            status = await c.status()
         if c.vin != vehicle.vin:
             raise MgIndiaApiError("VIN changed during snapshot")
         return Snapshot(vehicle, caps, status)
