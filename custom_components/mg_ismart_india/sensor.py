@@ -115,7 +115,10 @@ class MgChargeSensor(MgIndiaEntity, SensorEntity):
 
     @property
     def native_value(self):
-        return getattr(getattr(self.status, "charge", None), self._attr, None)
+        v = getattr(getattr(self.status, "charge", None), self._attr, None)
+        if v is None and self._attr == "soc":  # India EV: status fuel_level is SOC
+            v = getattr(self.status, "fuel_level", None)
+        return v
 
 
 class MgLastCommandSensor(MgIndiaEntity, SensorEntity):
