@@ -4,6 +4,8 @@ Lean Home Assistant custom integration for MG iSMART India vehicles.
 
 India-only by design: it uses the MG India TAP/gateway endpoints directly instead of carrying the EU/AU/ROW abstractions from the generic MG/SAIC integration.
 
+Don't run this and the MG SAIC integration (townsmcp/mg-saic-ha) on the same MG India account at the same time: they keep logging each other out and double the polling.
+
 ## Current scope
 - phone/password login
 - vehicle selection
