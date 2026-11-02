@@ -18,7 +18,8 @@
       }
     },
     "error": {
-      "cannot_connect": "Could not connect or authenticate. Check the 10 digit Indian mobile number and MG iSMART password."
+      "cannot_connect": "Could not connect or authenticate. Check the 10 digit Indian mobile number and MG iSMART password.",
+      "mfa_enabled": "Multi-factor login is on for this MG account. Turn it off in the MG iSMART app's security settings, then try again."
     }
   },
   "options": {

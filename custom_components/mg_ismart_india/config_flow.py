@@ -3,7 +3,12 @@ from typing import Any
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from mg_ismart_india_client import MgIndiaApiError, MgIndiaClient, hash_control_pin
+from mg_ismart_india_client import (
+    MgIndiaApiError,
+    MgIndiaClient,
+    MgIndiaMfaRequired,
+    hash_control_pin,
+)
 from .const import (
     CONF_PASSWORD,
     CONF_PHONE,
@@ -61,6 +66,8 @@ class MgIndiaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     self._abort_if_unique_id_configured()
                     return self.async_create_entry(title=v.name, data=data)
                 return await self.async_step_vehicle()
+            except MgIndiaMfaRequired:
+                errors["base"] = "mfa_enabled"
             except Exception:
                 errors["base"] = "cannot_connect"
         schema = vol.Schema(

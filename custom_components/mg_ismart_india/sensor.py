@@ -7,12 +7,12 @@ from homeassistant.components.sensor import (
 from homeassistant.const import (
     PERCENTAGE,
     UnitOfLength,
+    UnitOfPower,
     UnitOfTime,
     UnitOfElectricPotential,
     UnitOfTemperature,
 )
 from .const import DOMAIN
-from .coordinator import is_electric
 from .entity import MgIndiaEntity
 
 SENSORS = [
@@ -74,12 +74,19 @@ CHARGE_SENSORS = [
         SensorDeviceClass.DURATION,
         "charge_time_elapsed_s",
     ),
+    (
+        "charging_power",
+        "Charging Power",
+        UnitOfPower.KILO_WATT,
+        SensorDeviceClass.POWER,
+        "charging_power_kw",
+    ),
 ]
 
 
 async def async_setup_entry(hass, entry, async_add_entities):
     c = hass.data[DOMAIN][entry.entry_id]["coordinator"]
-    ev = is_electric(c.data.vehicle)
+    ev = c.data.vehicle.is_electric
     async_add_entities(
         [MgIndiaSensor(c, *s) for s in SENSORS if not (ev and s[0] == "fuel_level")]
         + [MgChargeSensor(c, *s) for s in CHARGE_SENSORS if ev]
@@ -112,13 +119,14 @@ class MgChargeSensor(MgIndiaEntity, SensorEntity):
         self._attr_native_unit_of_measurement = unit
         self._attr_device_class = device_class
         self._attr = attr
+        if attr == "charging_power_kw":
+            self._attr_state_class = SensorStateClass.MEASUREMENT
 
     @property
     def native_value(self):
-        v = getattr(getattr(self.status, "charge", None), self._attr, None)
-        if v is None and self._attr == "soc":  # India EV: status fuel_level is SOC
-            v = getattr(self.status, "fuel_level", None)
-        return v
+        if self._attr == "soc":
+            return self.coordinator.data.battery_soc
+        return getattr(getattr(self.status, "charge", None), self._attr, None)
 
 
 class MgLastCommandSensor(MgIndiaEntity, SensorEntity):

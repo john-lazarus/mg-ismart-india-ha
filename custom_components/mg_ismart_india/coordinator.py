@@ -24,37 +24,6 @@ _LOGGER = logging.getLogger(__name__)
 _T = TypeVar("_T")
 
 
-def _vehicle_config(vehicle, code: str, default=None):
-    raw = getattr(vehicle, "raw", None)
-    if isinstance(raw, dict):
-        for block_name in ("configuration", "config", "modelConfig"):
-            block = raw.get(block_name)
-            if isinstance(block, dict) and code in block:
-                return block[code]
-        for item in raw.get("vehicleModelConfiguration", []) or []:
-            if isinstance(item, dict) and item.get("itemCode") == code:
-                return item.get("itemValue", default)
-    return default
-
-
-def is_electric(vehicle) -> bool:
-    text = " ".join(
-        str(value or "")
-        for value in (
-            getattr(vehicle, "name", None),
-            getattr(vehicle, "model", None),
-            getattr(vehicle, "brand", None),
-            _vehicle_config(vehicle, "EV"),
-            _vehicle_config(vehicle, "BType"),
-        )
-    ).lower()
-    if str(_vehicle_config(vehicle, "EV", "")).strip() == "1":
-        return True
-    if str(_vehicle_config(vehicle, "BType", "")).strip() == "1":
-        return True
-    return any(token in text for token in ("electric", " ev", "comet", "windsor"))
-
-
 class MgIndiaCoordinator(DataUpdateCoordinator):
     def __init__(self, hass: HomeAssistant, client: MgIndiaClient):
         super().__init__(
@@ -75,7 +44,7 @@ class MgIndiaCoordinator(DataUpdateCoordinator):
         if not c.vehicle or c.vehicle.vin != c.vin:
             await c.vehicles()
         vehicle = c.vehicle
-        if not is_electric(vehicle):
+        if not vehicle.is_electric:
             return await c.snapshot()
         # Same as client.snapshot(), but the single status poll also asks for
         # the charging frame (status.charge stays None when none arrives).

@@ -4,7 +4,6 @@ from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
 )
 from .const import DOMAIN
-from .coordinator import is_electric
 from .entity import MgIndiaEntity
 
 BINS = [
@@ -33,7 +32,7 @@ CHARGE_BINS = [
 
 async def async_setup_entry(hass, entry, async_add_entities):
     c = hass.data[DOMAIN][entry.entry_id]["coordinator"]
-    ev = is_electric(c.data.vehicle)
+    ev = c.data.vehicle.is_electric
     async_add_entities(
         [MgIndiaBinary(c, *b) for b in BINS]
         + [MgChargeBinary(c, *b) for b in CHARGE_BINS if ev]

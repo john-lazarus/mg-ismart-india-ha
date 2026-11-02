@@ -12,7 +12,7 @@
     "mg_ismart_india_client"
   ],
   "requirements": [
-    "mg-ismart-india-client==0.2.1"
+    "mg-ismart-india-client==0.3.0"
   ],
-  "version": "0.2.0"
+  "version": "0.2.1"
 }
