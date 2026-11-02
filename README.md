@@ -7,10 +7,13 @@ India-only by design: it uses the MG India TAP/gateway endpoints directly instea
 ## Current scope
 - phone/password login
 - vehicle selection
-- read-only status polling
+- status polling
 - doors/windows/boot/bonnet/lock/fuel/range/odometer/temperature/aux battery/CAN sensors
+- EV battery level, charging state, plug state, charge time remaining and charging duration (electric models only; shared accounts may not get charging data)
 - dynamic capability discovery
 - PIN-protected controls for climate, lock/unlock, windows, sunroof, tailgate, find-my-car, heated seats where supported
+
+Remote controls (AC, lock, windows...) stay unavailable until the 4-digit control PIN is set under Configure.
 
 This project is not affiliated with MG, SAIC, or JSW MG Motor India.
 
@@ -68,3 +71,8 @@ Retries transient malformed TAP login responses seen immediately after Home Assi
 ## v0.1.11
 
 Fixes ZS/Astor lock commands failing at PIN verification with TAP result 2 by refreshing the TAP session and retrying PIN verification once before sending the remote-control command.
+
+
+## v0.2.0
+
+Uses the mg-ismart-india-client 0.2.1 package instead of the bundled protocol code. Adds EV battery and charging sensors (Battery, Charging, Plugged In, Charge Time Remaining, Charging Duration) for electric models.

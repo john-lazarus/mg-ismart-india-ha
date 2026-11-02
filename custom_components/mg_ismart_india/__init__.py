@@ -3,7 +3,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from .api import MgIndiaClient
+from mg_ismart_india_client import MgIndiaClient
 from .const import CONF_PASSWORD, CONF_PHONE, CONF_PIN_HASH, CONF_VIN, DOMAIN
 from .coordinator import MgIndiaCoordinator
 

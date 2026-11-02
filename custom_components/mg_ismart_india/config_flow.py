@@ -3,7 +3,7 @@ from typing import Any
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from .api import MgIndiaClient, MgIndiaApiError, hash_control_pin
+from mg_ismart_india_client import MgIndiaApiError, MgIndiaClient, hash_control_pin
 from .const import (
     CONF_PASSWORD,
     CONF_PHONE,

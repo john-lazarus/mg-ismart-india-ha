@@ -10,11 +10,43 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
-from .api import MgIndiaClient
+from mg_ismart_india_client import MgIndiaApiError, MgIndiaClient, Snapshot
+
 from .const import DEFAULT_SCAN_INTERVAL_SECONDS, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 _T = TypeVar("_T")
+
+
+def _vehicle_config(vehicle, code: str, default=None):
+    raw = getattr(vehicle, "raw", None)
+    if isinstance(raw, dict):
+        for block_name in ("configuration", "config", "modelConfig"):
+            block = raw.get(block_name)
+            if isinstance(block, dict) and code in block:
+                return block[code]
+        for item in raw.get("vehicleModelConfiguration", []) or []:
+            if isinstance(item, dict) and item.get("itemCode") == code:
+                return item.get("itemValue", default)
+    return default
+
+
+def is_electric(vehicle) -> bool:
+    text = " ".join(
+        str(value or "")
+        for value in (
+            getattr(vehicle, "name", None),
+            getattr(vehicle, "model", None),
+            getattr(vehicle, "brand", None),
+            _vehicle_config(vehicle, "EV"),
+            _vehicle_config(vehicle, "BType"),
+        )
+    ).lower()
+    if str(_vehicle_config(vehicle, "EV", "")).strip() == "1":
+        return True
+    if str(_vehicle_config(vehicle, "BType", "")).strip() == "1":
+        return True
+    return any(token in text for token in ("electric", " ev", "comet", "zs", "windsor"))
 
 
 class MgIndiaCoordinator(DataUpdateCoordinator):
@@ -33,7 +65,19 @@ class MgIndiaCoordinator(DataUpdateCoordinator):
         self.last_command_error: str | None = None
 
     async def _async_update_data(self):
-        return await self.client.snapshot()
+        c = self.client
+        if not c.vehicle or c.vehicle.vin != c.vin:
+            await c.vehicles()
+        vehicle = c.vehicle
+        if not is_electric(vehicle):
+            return await c.snapshot()
+        # Same as client.snapshot(), but the single status poll also asks for
+        # the charging frame (status.charge stays None when none arrives).
+        caps = await c.refresh_capabilities()
+        status = await c.status(include_charge=True)
+        if c.vin != vehicle.vin:
+            raise MgIndiaApiError("VIN changed during snapshot")
+        return Snapshot(vehicle, caps, status)
 
     async def async_run_command(
         self, name: str, operation: Callable[[], Awaitable[_T]]

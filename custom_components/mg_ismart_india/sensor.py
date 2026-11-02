@@ -7,10 +7,12 @@ from homeassistant.components.sensor import (
 from homeassistant.const import (
     PERCENTAGE,
     UnitOfLength,
+    UnitOfTime,
     UnitOfElectricPotential,
     UnitOfTemperature,
 )
 from .const import DOMAIN
+from .coordinator import is_electric
 from .entity import MgIndiaEntity
 
 SENSORS = [
@@ -55,10 +57,33 @@ SENSORS = [
 ]
 
 
+# (key, name, unit, device_class, charge attribute)
+CHARGE_SENSORS = [
+    ("fuel_level", "Battery", PERCENTAGE, SensorDeviceClass.BATTERY, "soc"),
+    (
+        "charge_time_remaining",
+        "Charge Time Remaining",
+        UnitOfTime.MINUTES,
+        SensorDeviceClass.DURATION,
+        "charge_time_remaining_min",
+    ),
+    (
+        "charging_duration",
+        "Charging Duration",
+        UnitOfTime.SECONDS,
+        SensorDeviceClass.DURATION,
+        "charge_time_elapsed_s",
+    ),
+]
+
+
 async def async_setup_entry(hass, entry, async_add_entities):
     c = hass.data[DOMAIN][entry.entry_id]["coordinator"]
+    ev = is_electric(c.data.vehicle)
     async_add_entities(
-        [MgIndiaSensor(c, *s) for s in SENSORS] + [MgLastCommandSensor(c)]
+        [MgIndiaSensor(c, *s) for s in SENSORS if not (ev and s[0] == "fuel_level")]
+        + [MgChargeSensor(c, *s) for s in CHARGE_SENSORS if ev]
+        + [MgLastCommandSensor(c)]
     )
 
 
@@ -79,6 +104,18 @@ class MgIndiaSensor(MgIndiaEntity, SensorEntity):
         ):
             return datetime.datetime.fromtimestamp(v, datetime.UTC)
         return v
+
+
+class MgChargeSensor(MgIndiaEntity, SensorEntity):
+    def __init__(self, c, key, name, unit, device_class, attr):
+        super().__init__(c, key, name)
+        self._attr_native_unit_of_measurement = unit
+        self._attr_device_class = device_class
+        self._attr = attr
+
+    @property
+    def native_value(self):
+        return getattr(getattr(self.status, "charge", None), self._attr, None)
 
 
 class MgLastCommandSensor(MgIndiaEntity, SensorEntity):
