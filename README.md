@@ -6,6 +6,8 @@ India-only by design: it uses the MG India TAP/gateway endpoints directly instea
 
 Don't run this and the MG SAIC integration (townsmcp/mg-saic-ha) on the same MG India account at the same time: they keep logging each other out and double the polling.
 
+MG India allows one login session per account, so setting this up signs the MG app out on your phone. Multi-factor login (the SMS code) isn't supported yet: switch it off in the MG app's security settings first.
+
 ## Current scope
 - phone/password login
 - vehicle selection
@@ -16,6 +18,8 @@ Don't run this and the MG SAIC integration (townsmcp/mg-saic-ha) on the same MG 
 - PIN-protected controls for climate, lock/unlock, windows, sunroof, tailgate, find-my-car, heated seats where supported
 
 Remote controls (AC, lock, windows...) stay unavailable until the 4-digit control PIN is set under Configure.
+
+AC on/off goes through MG's servers, so it only works if your MG account has the paid remote AC subscription where MG requires one.
 
 This project is not affiliated with MG, SAIC, or JSW MG Motor India.
 
