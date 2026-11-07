@@ -62,8 +62,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         data.get(CONF_SCAN_INTERVAL_PARKED, DEFAULT_SCAN_INTERVAL_PARKED),
         data.get(CONF_SCAN_INTERVAL_ACTIVE, DEFAULT_SCAN_INTERVAL_ACTIVE),
     )
-    await coordinator.async_config_entry_first_refresh()
     account["entries"].add(entry.entry_id)
+    try:
+        await coordinator.async_config_entry_first_refresh()
+    except BaseException:
+        account["entries"].discard(entry.entry_id)
+        if not account["entries"]:
+            accounts.pop(phone, None)
+        raise
     entry.async_on_unload(entry.add_update_listener(async_update_options))
     hass.data[DOMAIN][entry.entry_id] = {
         "client": account["client"],

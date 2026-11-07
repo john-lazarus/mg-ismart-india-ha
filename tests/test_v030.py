@@ -91,3 +91,24 @@ def test_options_pass_intervals_and_keep_pin_behaviour():
         "pin_hash": "",
     }
     assert len(options_from_user_input({"pin": "1234"})["pin_hash"]) == 32
+
+
+def test_failed_first_refresh_leaves_no_account_record(monkeypatch):
+    import pytest
+
+    import custom_components.mg_ismart_india as mod
+
+    async def boom(self):
+        raise RuntimeError("login failed")
+
+    monkeypatch.setattr(MgIndiaCoordinator, "async_config_entry_first_refresh", boom)
+    monkeypatch.setattr(mod, "async_get_clientsession", lambda hass: None)
+    hass = types.SimpleNamespace(data={})
+    e = types.SimpleNamespace(
+        entry_id="a",
+        data={"phone": "+91 98765 43210", "password": "pw", "vin": "V", "pin_hash": None},
+        options={},
+    )
+    with pytest.raises(RuntimeError):
+        asyncio.run(async_setup_entry(hass, e))
+    assert hass.data["mg_ismart_india"]["accounts"] == {}
