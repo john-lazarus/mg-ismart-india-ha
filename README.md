@@ -97,6 +97,10 @@ Uses the mg-ismart-india-client 0.2.1 package instead of the bundled protocol co
 Uses the mg-ismart-india-client 0.3.0 package. Adds a Charging Power sensor for electric models. Shows a clear message when multi-factor login is on for the MG account.
 
 
+## v0.3.3
+
+Uses mg-ismart-india-client 0.3.2, which logs in again when another login takes over the MG account (for example when a second car is added), instead of failing until Home Assistant restarts.
+
 ## v0.3.2
 
 The AC uses Home Assistant's native temperature unit on newer versions. CAN Bus Active and Last Vehicle Activity are now diagnostic and off by default for new installs, because the car wakes up to answer each status poll, so they always read as active.
