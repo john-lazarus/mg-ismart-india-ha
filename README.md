@@ -21,7 +21,7 @@ MG India allows one login session per account, so setting this up signs the MG a
 - a Last Update diagnostic sensor showing when Home Assistant last refreshed successfully
 - PIN-protected controls for climate, lock/unlock, windows, sunroof, tailgate, find-my-car, heated seats where supported
 
-Polling is adaptive and set under Configure: every 30 minutes while parked (5 to 1440), every 5 minutes while charging, the AC is running or the car is active (1 to 60).
+Polling is adaptive and set under Configure: every 30 minutes while parked (5 to 1440), every 5 minutes while charging, the AC is running or the car is moving (1 to 60).
 
 If you add several cars from the same MG account, they share one login and take turns, so they no longer log each other out.
 
@@ -97,6 +97,10 @@ Uses the mg-ismart-india-client 0.2.1 package instead of the bundled protocol co
 Uses the mg-ismart-india-client 0.3.0 package. Adds a Charging Power sensor for electric models. Shows a clear message when multi-factor login is on for the MG account.
 
 
+## v0.3.1
+
+Parked cars now really use the parked interval: a status poll wakes the car, so CAN bus activity no longer counts as active.
+
 ## v0.3.0
 
-Adds a GPS device tracker and Speed sensor, tyre pressure sensors, side/dipped/main beam sensors, EV Battery Energy, Distance Since Last Charge, Energy Since Last Charge, Charging Voltage and Charging Current sensors, and a Last Update diagnostic sensor. Adds Configure options for the parked and active polling intervals. Cars on the same MG account now share a single login. Note: the default parked poll interval changes from 3 minutes to 30 minutes (5 minutes while charging, AC running or the car is active); lower it under Configure if you want the old behaviour.
+Adds a GPS device tracker and Speed sensor, tyre pressure sensors, side/dipped/main beam sensors, EV Battery Energy, Distance Since Last Charge, Energy Since Last Charge, Charging Voltage and Charging Current sensors, and a Last Update diagnostic sensor. Adds Configure options for the parked and active polling intervals. Cars on the same MG account now share a single login. Note: the default parked poll interval changes from 3 minutes to 30 minutes (5 minutes while charging, AC running or the car is moving); lower it under Configure if you want the old behaviour.

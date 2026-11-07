@@ -5,7 +5,7 @@ from datetime import timedelta
 from custom_components.mg_ismart_india import async_setup_entry, async_unload_entry
 from custom_components.mg_ismart_india.config_flow import options_from_user_input
 from custom_components.mg_ismart_india.coordinator import MgIndiaCoordinator
-from mg_ismart_india_client import Capabilities, Snapshot, Status, Vehicle
+from mg_ismart_india_client import Capabilities, GpsPosition, GpsStatus, Snapshot, Status, Vehicle
 
 
 def test_interval_parked_vs_active():
@@ -21,6 +21,13 @@ def test_interval_parked_vs_active():
         await coord._async_update_data()
         assert coord.update_interval == timedelta(minutes=30)
         assert coord.last_update.tzinfo is not None
+        status.can_bus_active = True
+        await coord._async_update_data()
+        assert coord.update_interval == timedelta(minutes=30)
+        status.gps = GpsPosition(latitude=1.0, longitude=2.0, speed_kmh=40.0, gps_status=GpsStatus.FIX_3D)
+        await coord._async_update_data()
+        assert coord.update_interval == timedelta(minutes=5)
+        status.gps = None
         status.climate_running = True
         await coord._async_update_data()
         assert coord.update_interval == timedelta(minutes=5)

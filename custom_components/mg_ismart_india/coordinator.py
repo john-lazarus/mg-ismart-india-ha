@@ -79,9 +79,9 @@ class MgIndiaCoordinator(DataUpdateCoordinator):
         async with self.locked() as c:
             snap = await self._fetch(c)
         s = snap.status
-        active = (
-            (s.charge and s.charge.is_charging) or s.climate_running or s.can_bus_active
-        )
+        # A status poll wakes the car (CAN reads on), so CAN activity is not "active".
+        moving = bool(s.gps and s.gps.has_fix and (s.gps.speed_kmh or 0) > 0)
+        active = (s.charge and s.charge.is_charging) or s.climate_running or moving
         self.update_interval = timedelta(
             minutes=self.active_min if active else self.parked_min
         )
