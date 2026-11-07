@@ -5,19 +5,27 @@ from datetime import timedelta
 from custom_components.mg_ismart_india import async_setup_entry, async_unload_entry
 from custom_components.mg_ismart_india.config_flow import options_from_user_input
 from custom_components.mg_ismart_india.coordinator import MgIndiaCoordinator
-from mg_ismart_india_client import Capabilities, GpsPosition, GpsStatus, Snapshot, Status, Vehicle
+from mg_ismart_india_client import (
+    Capabilities,
+    GpsPosition,
+    GpsStatus,
+    MgIndiaApiError,
+    MgIndiaClient,
+    Snapshot,
+    Status,
+    Vehicle,
+)
 
 
 def test_interval_parked_vs_active():
     async def run():
         status = Status()
-        coord = MgIndiaCoordinator(None, None, asyncio.Lock(), "V", None, 30, 5)
+        coord = MgIndiaCoordinator(None, MgIndiaClient(None, "9876543210", "pw"), "V", None, 30, 5)
 
         async def fake(c):
             return Snapshot(Vehicle("V", "Car"), Capabilities(), status)
 
         coord._fetch = fake
-        coord.client = types.SimpleNamespace()
         await coord._async_update_data()
         assert coord.update_interval == timedelta(minutes=30)
         assert coord.last_update.tzinfo is not None
@@ -42,6 +50,7 @@ def test_two_entries_share_one_account_client(monkeypatch):
         seen = []
 
         async def fake_fetch(self, c):
+            assert c._lock.locked()  # inside for_vehicle()
             seen.append((c.vin, c.pin_hash))
             return Snapshot(Vehicle(c.vin, "Car"), Capabilities(), Status())
 
@@ -79,7 +88,7 @@ def test_two_entries_share_one_account_client(monkeypatch):
         assert len(accounts) == 1
         ca = hass.data["mg_ismart_india"]["a"]["coordinator"]
         cb = hass.data["mg_ismart_india"]["b"]["coordinator"]
-        assert ca.client is cb.client and ca.account_lock is cb.account_lock
+        assert ca.client is cb.client
         assert seen == [("VIN_A", "pa"), ("VIN_B", None)]
         assert ca.has_pin and not cb.has_pin
         await async_unload_entry(hass, a)
@@ -119,3 +128,36 @@ def test_failed_first_refresh_leaves_no_account_record(monkeypatch):
     with pytest.raises(RuntimeError):
         asyncio.run(async_setup_entry(hass, e))
     assert hass.data["mg_ismart_india"]["accounts"] == {}
+
+
+def test_unanswered_first_refresh_retries_once_at_parked_interval(monkeypatch):
+    import pytest
+    from homeassistant.exceptions import ConfigEntryError, ConfigEntryNotReady
+
+    import custom_components.mg_ismart_india as mod
+
+    async def no_answer(self):
+        raise ConfigEntryNotReady() from MgIndiaApiError("no answer")
+
+    scheduled, cancelled = [], []
+
+    def call_later(hass, delay, cb):
+        scheduled.append(delay)
+        return lambda: cancelled.append(delay)
+
+    monkeypatch.setattr(MgIndiaCoordinator, "async_config_entry_first_refresh", no_answer)
+    monkeypatch.setattr(mod, "async_get_clientsession", lambda hass: None)
+    monkeypatch.setattr(mod, "async_call_later", call_later)
+    hass = types.SimpleNamespace(data={})
+    e = types.SimpleNamespace(
+        entry_id="a",
+        title="Car",
+        data={"phone": "9876543210", "password": "pw", "vin": "V", "pin_hash": None},
+        options={"scan_interval_parked": 30},
+    )
+    with pytest.raises(ConfigEntryError, match="retrying in 30 minutes"):
+        asyncio.run(async_setup_entry(hass, e))
+    assert scheduled == [1800] and cancelled == []
+    with pytest.raises(ConfigEntryError):
+        asyncio.run(async_setup_entry(hass, e))
+    assert scheduled == [1800, 1800] and cancelled == [1800]

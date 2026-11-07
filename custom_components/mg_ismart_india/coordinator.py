@@ -2,18 +2,16 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Awaitable, Callable
-from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
 import logging
 from typing import TypeVar
 
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from aiohttp import ClientError
 from mg_ismart_india_client import (
-    Capabilities,
     MgIndiaApiError,
     MgIndiaClient,
     MgIndiaLoginRejected,
@@ -31,7 +29,6 @@ class MgIndiaCoordinator(DataUpdateCoordinator):
         self,
         hass: HomeAssistant,
         client: MgIndiaClient,
-        lock: asyncio.Lock,
         vin: str | None,
         pin_hash: str | None,
         parked_min: int,
@@ -44,14 +41,11 @@ class MgIndiaCoordinator(DataUpdateCoordinator):
             update_interval=timedelta(minutes=parked_min),
         )
         self.client = client
-        self.account_lock = lock
         self.vin = vin
         self.pin_hash = pin_hash
         self.parked_min = parked_min
         self.active_min = active_min
         self.last_update: datetime | None = None
-        self._vehicle = None
-        self._caps = Capabilities()
         self._command_lock = asyncio.Lock()
         self.command_in_progress = False
         self.command_name: str | None = None
@@ -62,26 +56,17 @@ class MgIndiaCoordinator(DataUpdateCoordinator):
     def has_pin(self) -> bool:
         return bool(self.pin_hash)
 
-    @asynccontextmanager
-    async def locked(self):
-        """Own the shared account client with this entry's car and PIN bound."""
-        async with self.account_lock:
-            c = self.client
-            c.vin, c.pin_hash = self.vin, self.pin_hash
-            c.vehicle, c.capabilities = self._vehicle, self._caps
-            try:
-                yield c
-            finally:
-                self._vehicle, self._caps = c.vehicle, c.capabilities
-                self.vin = c.vin
-
     async def _async_update_data(self):
-        async with self.locked() as c:
-            snap = await self._fetch(c)
+        try:
+            async with self.client.for_vehicle(self.vin, self.pin_hash) as c:
+                snap = await self._fetch(c)
+        except MgIndiaLoginRejected:
+            raise
+        except (MgIndiaApiError, ClientError, TimeoutError) as err:
+            raise UpdateFailed(str(err) or type(err).__name__) from err
         s = snap.status
         # A status poll wakes the car (CAN reads on), so CAN activity is not "active".
-        moving = bool(s.gps and s.gps.has_fix and (s.gps.speed_kmh or 0) > 0)
-        active = (s.charge and s.charge.is_charging) or s.climate_running or moving
+        active = (s.charge and s.charge.is_charging) or s.climate_running or s.is_moving
         self.update_interval = timedelta(
             minutes=self.active_min if active else self.parked_min
         )
@@ -122,7 +107,7 @@ class MgIndiaCoordinator(DataUpdateCoordinator):
             self.last_command_error = None
             self.async_update_listeners()
             try:
-                async with self.locked():
+                async with self.client.for_vehicle(self.vin, self.pin_hash):
                     result = await operation()
                 self.last_command_status = "refreshing"
                 self.async_update_listeners()

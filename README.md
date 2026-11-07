@@ -97,6 +97,10 @@ Uses the mg-ismart-india-client 0.2.1 package instead of the bundled protocol co
 Uses the mg-ismart-india-client 0.3.0 package. Adds a Charging Power sensor for electric models. Shows a clear message when multi-factor login is on for the MG account.
 
 
+## v0.4.0
+
+Uses mg-ismart-india-client 1.0.0: one login session serves several cars on the same account, and the integration waits longer for a sleeping car to answer. A car that does not answer at setup is retried at its parked interval instead of every minute, so Home Assistant no longer keeps waking it.
+
 ## v0.3.3
 
 Uses mg-ismart-india-client 0.3.2, which logs in again when another login takes over the MG account (for example when a second car is added), instead of failing until Home Assistant restarts.
