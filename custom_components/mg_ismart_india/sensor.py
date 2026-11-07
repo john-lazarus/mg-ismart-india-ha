@@ -158,6 +158,9 @@ class MgIndiaSensor(MgIndiaEntity, SensorEntity):
         self._attr_native_unit_of_measurement = unit
         self._attr_device_class = device_class
         self._attr_state_class = state_class
+        if key == "last_can_activity":
+            self._attr_entity_category = EntityCategory.DIAGNOSTIC
+            self._attr_entity_registry_enabled_default = False
 
     @property
     def native_value(self):

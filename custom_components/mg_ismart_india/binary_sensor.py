@@ -1,4 +1,5 @@
 from __future__ import annotations
+from homeassistant.const import EntityCategory
 from homeassistant.components.binary_sensor import (
     BinarySensorEntity,
     BinarySensorDeviceClass,
@@ -48,6 +49,9 @@ class MgIndiaBinary(MgIndiaEntity, BinarySensorEntity):
         super().__init__(c, key, name)
         self._attr_device_class = cls
         self._attr = attr or key
+        if key == "can_bus_active":
+            self._attr_entity_category = EntityCategory.DIAGNOSTIC
+            self._attr_entity_registry_enabled_default = False
 
     @property
     def is_on(self):
