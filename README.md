@@ -15,7 +15,15 @@ MG India allows one login session per account, so setting this up signs the MG a
 - doors/windows/boot/bonnet/lock/fuel/range/odometer/temperature/aux battery/CAN sensors
 - EV battery level, charging state, plug state, charge time remaining and charging duration (electric models only; shared accounts may not get charging data)
 - dynamic capability discovery
+- GPS location (device tracker) and speed, only while the car reports a usable fix
+- tyre pressures (only if the car reports them), side lights, dipped beam and main beam
+- EV battery energy, distance and energy since last charge, charging voltage and current
+- a Last Update diagnostic sensor showing when Home Assistant last refreshed successfully
 - PIN-protected controls for climate, lock/unlock, windows, sunroof, tailgate, find-my-car, heated seats where supported
+
+Polling is adaptive and set under Configure: every 30 minutes while parked (5 to 1440), every 5 minutes while charging, the AC is running or the car is active (1 to 60).
+
+If you add several cars from the same MG account, they share one login and take turns, so they no longer log each other out.
 
 Remote controls (AC, lock, windows...) stay unavailable until the 4-digit control PIN is set under Configure.
 
@@ -87,3 +95,8 @@ Uses the mg-ismart-india-client 0.2.1 package instead of the bundled protocol co
 ## v0.2.1
 
 Uses the mg-ismart-india-client 0.3.0 package. Adds a Charging Power sensor for electric models. Shows a clear message when multi-factor login is on for the MG account.
+
+
+## v0.3.0
+
+Adds a GPS device tracker and Speed sensor, tyre pressure sensors, side/dipped/main beam sensors, EV Battery Energy, Distance Since Last Charge, Energy Since Last Charge, Charging Voltage and Charging Current sensors, and a Last Update diagnostic sensor. Adds Configure options for the parked and active polling intervals. Cars on the same MG account now share a single login. Note: the default parked poll interval changes from 3 minutes to 30 minutes (5 minutes while charging, AC running or the car is active); lower it under Configure if you want the old behaviour.

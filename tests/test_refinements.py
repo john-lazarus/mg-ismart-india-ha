@@ -108,8 +108,9 @@ def test_control_entities_unavailable_while_remote_command_running():
         data=snap,
         last_update_success=True,
         command_in_progress=True,
+        has_pin=True,
     )
-    client = types.SimpleNamespace(has_pin=True)
+    client = types.SimpleNamespace()
 
     assert MgDoorLock(coordinator, client).available is False
     assert MgClimate(coordinator, client).available is False

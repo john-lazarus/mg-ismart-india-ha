@@ -21,6 +21,9 @@ BINS = [
     ("climate_running", "Climate Running", BinarySensorDeviceClass.RUNNING),
     ("can_bus_active", "CAN Bus Active", BinarySensorDeviceClass.RUNNING),
     ("handbrake", "Handbrake", None),
+    ("side_lights", "Side Lights", BinarySensorDeviceClass.LIGHT, "side_lights_on"),
+    ("dipped_beam", "Dipped Beam", BinarySensorDeviceClass.LIGHT, "dipped_beam_on"),
+    ("main_beam", "Main Beam", BinarySensorDeviceClass.LIGHT, "main_beam_on"),
 ]
 
 
@@ -41,13 +44,14 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
 
 class MgIndiaBinary(MgIndiaEntity, BinarySensorEntity):
-    def __init__(self, c, key, name, cls):
+    def __init__(self, c, key, name, cls, attr=None):
         super().__init__(c, key, name)
         self._attr_device_class = cls
+        self._attr = attr or key
 
     @property
     def is_on(self):
-        return getattr(self.status, self._key, None) if self.status else None
+        return getattr(self.status, self._attr, None) if self.status else None
 
 
 class MgChargeBinary(MgIndiaEntity, BinarySensorEntity):

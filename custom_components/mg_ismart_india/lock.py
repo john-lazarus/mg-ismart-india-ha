@@ -21,7 +21,7 @@ class MgDoorLock(MgIndiaEntity, LockEntity):
     def available(self):
         return (
             super().available
-            and self.client.has_pin
+            and self.coordinator.has_pin
             and not getattr(self.coordinator, "command_in_progress", False)
         )
 

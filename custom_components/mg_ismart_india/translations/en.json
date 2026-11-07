@@ -29,7 +29,9 @@
         "description": "Vehicle control PIN is currently {pin_status}. Enter a new PIN to enable or update remote controls. Leave it blank to keep the current PIN. Tick clear to remove the saved PIN and disable controls.",
         "data": {
           "pin": "Vehicle control PIN",
-          "clear_pin": "Clear saved vehicle control PIN"
+          "clear_pin": "Clear saved vehicle control PIN",
+          "scan_interval_parked": "Poll interval when parked (minutes, 5-1440)",
+          "scan_interval_active": "Poll interval when charging, climate on or car active (minutes, 1-60)"
         }
       }
     },

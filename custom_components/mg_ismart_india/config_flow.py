@@ -13,19 +13,27 @@ from .const import (
     CONF_PASSWORD,
     CONF_PHONE,
     CONF_PIN_HASH,
+    CONF_SCAN_INTERVAL_ACTIVE,
+    CONF_SCAN_INTERVAL_PARKED,
     CONF_VEHICLE_NAME,
     CONF_VIN,
+    DEFAULT_SCAN_INTERVAL_ACTIVE,
+    DEFAULT_SCAN_INTERVAL_PARKED,
     DOMAIN,
 )
 
 
 def options_from_user_input(user_input: dict[str, Any]) -> dict[str, Any]:
+    out = {
+        k: user_input[k]
+        for k in (CONF_SCAN_INTERVAL_PARKED, CONF_SCAN_INTERVAL_ACTIVE)
+        if k in user_input
+    }
     if user_input.get("clear_pin"):
-        return {CONF_PIN_HASH: ""}
-    pin = user_input.get("pin")
-    if pin:
-        return {CONF_PIN_HASH: hash_control_pin(pin)}
-    return {}
+        out[CONF_PIN_HASH] = ""
+    elif user_input.get("pin"):
+        out[CONF_PIN_HASH] = hash_control_pin(user_input["pin"])
+    return out
 
 
 class MgIndiaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -114,12 +122,25 @@ class MgIndiaOptionsFlow(config_entries.OptionsFlow):
             self.config_entry.options.get(CONF_PIN_HASH)
             or self.config_entry.data.get(CONF_PIN_HASH)
         )
+        opts = {**self.config_entry.data, **self.config_entry.options}
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema(
                 {
                     vol.Optional("pin"): str,
                     vol.Optional("clear_pin", default=False): bool,
+                    vol.Optional(
+                        CONF_SCAN_INTERVAL_PARKED,
+                        default=opts.get(
+                            CONF_SCAN_INTERVAL_PARKED, DEFAULT_SCAN_INTERVAL_PARKED
+                        ),
+                    ): vol.All(vol.Coerce(int), vol.Range(min=5, max=1440)),
+                    vol.Optional(
+                        CONF_SCAN_INTERVAL_ACTIVE,
+                        default=opts.get(
+                            CONF_SCAN_INTERVAL_ACTIVE, DEFAULT_SCAN_INTERVAL_ACTIVE
+                        ),
+                    ): vol.All(vol.Coerce(int), vol.Range(min=1, max=60)),
                 }
             ),
             errors=errors,
