@@ -22,7 +22,10 @@ class MgClimate(MgIndiaEntity, ClimateEntity):
         ClimateEntityFeature.TURN_ON | ClimateEntityFeature.TURN_OFF
     )
     _attr_hvac_modes = [HVACMode.OFF, HVACMode.COOL]
-    _attr_temperature_unit = UnitOfTemperature.CELSIUS
+    if hasattr(ClimateEntity, "native_temperature_unit"):
+        _attr_native_temperature_unit = UnitOfTemperature.CELSIUS
+    else:  # older Home Assistant
+        _attr_temperature_unit = UnitOfTemperature.CELSIUS
 
     def __init__(self, coordinator, client):
         super().__init__(coordinator, "climate", "Climate")
