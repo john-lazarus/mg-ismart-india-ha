@@ -1,4 +1,5 @@
 from __future__ import annotations
+from datetime import UTC, datetime
 from homeassistant.components.sensor import (
     SensorEntity,
     SensorDeviceClass,
@@ -90,6 +91,14 @@ CHARGE_SENSORS = [
         None,
     ),
     (
+        "charging_completion_time",
+        "Charging Completion Time",
+        None,
+        SensorDeviceClass.TIMESTAMP,
+        "estimated_completion_time",
+        None,
+    ),
+    (
         "charging_power",
         "Charging Power",
         UnitOfPower.KILO_WATT,
@@ -164,13 +173,11 @@ class MgIndiaSensor(MgIndiaEntity, SensorEntity):
 
     @property
     def native_value(self):
-        import datetime
-
         v = getattr(self.status, self._key, None) if self.status else None
         if self._attr_device_class == SensorDeviceClass.TIMESTAMP and isinstance(
             v, int
         ):
-            return datetime.datetime.fromtimestamp(v, datetime.UTC)
+            return datetime.fromtimestamp(v, UTC)
         return v
 
 
@@ -186,7 +193,12 @@ class MgChargeSensor(MgIndiaEntity, SensorEntity):
     def native_value(self):
         if self._attr == "soc":
             return self.coordinator.data.battery_soc
-        return getattr(getattr(self.status, "charge", None), self._attr, None)
+        v = getattr(getattr(self.status, "charge", None), self._attr, None)
+        if self._attr_device_class == SensorDeviceClass.TIMESTAMP and isinstance(
+            v, int
+        ):
+            return datetime.fromtimestamp(v, UTC)
+        return v
 
 
 class MgLastCommandSensor(MgIndiaEntity, SensorEntity):

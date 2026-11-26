@@ -15,6 +15,7 @@ from mg_ismart_india_client import (
     MgIndiaApiError,
     MgIndiaClient,
     MgIndiaLoginRejected,
+    MgIndiaVehicleUnreachable,
     Snapshot,
 )
 
@@ -84,7 +85,8 @@ class MgIndiaCoordinator(DataUpdateCoordinator):
         caps = await c.refresh_capabilities()
         try:
             status = await c.status(include_charge=True)
-        except MgIndiaLoginRejected:
+        except (MgIndiaLoginRejected, MgIndiaVehicleUnreachable):
+            # A car that didn't answer the status request would only be woken again.
             raise
         except (ClientError, TimeoutError, MgIndiaApiError) as err:
             _LOGGER.warning("EV charge poll failed, using status only: %s", err)

@@ -29,7 +29,7 @@ class MgSeat(MgIndiaEntity, SelectEntity):
         )
         self.client = client
         self.side = side
-        self._level = "0"
+        self.heat_side = "front_left" if side == "driver" else "front_right"
 
     @property
     def available(self):
@@ -41,13 +41,11 @@ class MgSeat(MgIndiaEntity, SelectEntity):
 
     @property
     def current_option(self):
-        return self._level
+        level = getattr(self.status, f"{self.heat_side}_seat_heat_level", None)
+        return None if level is None else str(level)
 
     async def async_select_option(self, option):
-        self._level = option
-        driver = int(option) if self.side == "driver" else 0
-        passenger = int(option) if self.side == "passenger" else 0
         await self.coordinator.async_run_command(
             f"Set {self.side} heated seat",
-            lambda: self.client.control_heated_seats(driver, passenger),
+            lambda: self.client.control_heated_seats(**{self.side: int(option)}),
         )

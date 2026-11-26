@@ -114,3 +114,28 @@ def test_control_entities_unavailable_while_remote_command_running():
 
     assert MgDoorLock(coordinator, client).available is False
     assert MgClimate(coordinator, client).available is False
+
+
+def test_heated_seat_select_shows_car_level_and_keeps_other_seat():
+    from custom_components.mg_ismart_india.select import MgSeat
+
+    snap = Snapshot(
+        Vehicle("VIN12345678901234", "Car"),
+        Capabilities(heated_seats=True),
+        Status(front_left_seat_heat_level=2, front_right_seat_heat_level=1),
+    )
+    calls = []
+
+    async def run_command(name, op):
+        return await op()
+
+    async def control(**kw):
+        calls.append(kw)
+
+    coordinator = types.SimpleNamespace(data=snap, async_run_command=run_command)
+    client = types.SimpleNamespace(control_heated_seats=control)
+    seat = MgSeat(coordinator, client, "passenger")
+
+    assert seat.current_option == "1"
+    asyncio.run(seat.async_select_option("3"))
+    assert calls == [{"passenger": 3}]

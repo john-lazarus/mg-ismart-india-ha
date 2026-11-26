@@ -13,7 +13,7 @@ MG India allows one login session per account, so setting this up signs the MG a
 - vehicle selection
 - status polling
 - doors/windows/boot/bonnet/lock/fuel/range/odometer/temperature/aux battery/CAN sensors
-- EV battery level, charging state, plug state, charge time remaining and charging duration (electric models only; shared accounts may not get charging data)
+- EV battery level, charging state, plug state, charge time remaining, charging completion time and charging duration (electric models only; shared accounts may not get charging data)
 - dynamic capability discovery
 - GPS location (device tracker) and speed, only while the car reports a usable fix
 - tyre pressures (only if the car reports them), side lights, dipped beam and main beam
@@ -96,6 +96,13 @@ Uses the mg-ismart-india-client 0.2.1 package instead of the bundled protocol co
 
 Uses the mg-ismart-india-client 0.3.0 package. Adds a Charging Power sensor for electric models. Shows a clear message when multi-factor login is on for the MG account.
 
+
+## v0.5.0
+
+Heated seats no longer switch the other seat off, and each select shows the car's own level.
+New Charging Completion Time sensor for electric models.
+A car that doesn't answer is no longer asked a second time in the same refresh.
+Uses mg-ismart-india-client 1.2.0 (which also confirms lock/unlock from the car's status when MG doesn't confirm).
 
 ## v0.4.0
 
